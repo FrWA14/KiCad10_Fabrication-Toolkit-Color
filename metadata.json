@@ -2,7 +2,7 @@
     "$schema": "https://go.kicad.org/pcm/schemas/v1",
     "name": "Fabrication Toolkit Color",
     "description": "JLCPCB fabrication toolkit + multi-colour silkscreen",
-    "description_full": "Fork of Fabrication Toolkit (Benny Megidish, Apache-2.0) that can add a full-colour PNG/JPG image to the top and/or bottom face for JLCPCB's 'EasyEDA multi-color silkscreen' option.\n\nColour files are produced with an unofficial, reverse-engineered format (port of TransJLC by HalfSweet, Apache-2.0). JLCPCB officially accepts colour files from EasyEDA Pro only: check the JLCPCB Gerber Viewer before ordering.\n\nWithout image the output is identical to Fabrication Toolkit.",
+    "description_full": "Fork of Fabrication Toolkit (Benny Megidish, Apache-2.0) that can add a full-colour PNG/JPG image to the top and/or bottom face for JLCPCB's 'EasyEDA multi-color silkscreen' option.\n\nColour files are produced with an unofficial, reverse-engineered format (port of TransJLC by HalfSweet, Apache-2.0). JLCPCB officially accepts colour files from EasyEDA Pro only: check the JLCPCB Gerber Viewer before ordering.\n\nWithout image the output is identical to Fabrication Toolkit.\n\n0.2.0: visual placement editor (top and bottom views, move/resize/rotate); the image is clipped to the closed Edge.Cuts outline before export.",
     "identifier": "com.github.frwa.fabrication-toolkit-color",
     "type": "plugin",
     "author": {
@@ -28,7 +28,7 @@
     ],
     "versions": [
         {
-            "version": "0.1.0",
+            "version": "0.2.0",
             "status": "testing",
             "kicad_version": "10.0"
         }

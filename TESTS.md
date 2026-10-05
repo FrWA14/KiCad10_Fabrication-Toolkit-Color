@@ -8,14 +8,18 @@
 
 # Unitaires : Python de KiCad ET Python système (avec cryptography : interop OAEP en plus)
 cd tests
-"C:\Program Files\KiCad\10.0\bin\python.exe" -m unittest test_unit test_parity test_integration
-python -m unittest test_unit
+"C:\Program Files\KiCad\10.0\bin\python.exe" -m unittest test_unit test_placement test_parity test_integration
+python -m unittest test_unit test_placement
 
 # Matrice carte × image par la CLI réelle (met à jour le tableau ci-dessous)
 "C:\Program Files\KiCad\10.0\bin\python.exe" tests/run_matrix.py
 
 # Boîte de dialogue wx hors KiCad (contrôles + options transmises)
 "C:\Program Files\KiCad\10.0\bin\python.exe" tests/ui_smoke.py
+
+# Éditeur de placement, hors écran : déplacer / redimensionner / rotation / champs, rendu des deux vues
+# dans out/placement/editor_*.png (rendu en mémoire, aucune capture d'écran) et composition 1200 DPI
+"C:\Program Files\KiCad\10.0\bin\python.exe" tests/placement_smoke.py [carte.kicad_pcb] [dessus.png] [dessous.jpg]
 ```
 
 Les tests sont écrits avec `unittest` (pytest n'est pas installé). `pytest -q tests/` les découvre aussi.
@@ -23,7 +27,7 @@ Les tests sont écrits avec `unittest` (pytest n'est pas installé). `pytest -q 
 Sorties : `out/matrix/<cas>/{report.json, color_silkscreen.log, svg/, production/}` et `out/matrix.json`.
 Le dossier `svg/` contient les SVG en clair (option `--debugSvg`). On peut les ouvrir dans un navigateur pour vérifier le rendu.
 
-## Dernier passage (5 octobre 2026, KiCad 10.0.4, Windows 11)
+## Dernier passage (6 octobre 2026, KiCad 10.0.4, Windows 11)
 
 | Suite | Interpréteur | Résultat |
 |---|---|---|
@@ -31,7 +35,9 @@ Le dossier `svg/` contient les SVG en clair (option `--debugSvg`). On peut les o
 | `test_unit` (32 tests) | Système 3.14 | OK |
 | `test_parity` (6 tests, TransJLC 0.4.0 + patch debug) | KiCad 3.11 | OK |
 | `test_integration` (matrice + non-régression T2/T5 contre FT d'origine) | KiCad 3.11 | OK |
+| `test_placement` (7 tests : cadrage, découpe contour + découpe interne, position, miroir, rotation) | KiCad 3.11 et système 3.14 | OK |
 | `ui_smoke.py` | KiCad 3.11 | OK |
+| `placement_smoke.py` (T2 et copie de la carte RP2350 de l'utilisateur) | KiCad 3.11 | OK |
 
 ### Matrice (générée par `tests/run_matrix.py`)
 
@@ -50,6 +56,7 @@ Le dossier `svg/` contient les SVG en clair (option `--debugSvg`). On peut les o
 | T5-4layers | T5 | — | photo.jpg | — | ok | ok | — | ✅ |
 | T6-no-outline | T6 | logo.png | — | — | error / E_OUTLINE_MISSING | error / E_OUTLINE_MISSING | — | ✅ |
 | T7-huge | T7 | huge.png | — | — | ok | ok | W_IMAGE_RESAMPLED | ✅ |
+| T3-placement | T3 | logo.png (placé) | photo.jpg (placé, 90°) | --placement AUTO | ok | ok | — | ✅ |
 | T7-contain | T7 | logo.png | — | --colorFit contain | ok | ok | W_IMAGE_PADDED | ✅ |
 <!-- matrix:end -->
 

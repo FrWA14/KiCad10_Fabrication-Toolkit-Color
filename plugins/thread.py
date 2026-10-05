@@ -221,12 +221,13 @@ class ProcessThread(Thread):
     """ Colour silkscreen """
 
     def color_requested(self):
-        return bool(self.options.get(TOP_IMAGE_OPT) or self.options.get(BOTTOM_IMAGE_OPT))
+        return any(self.options.get(k) for k in (TOP_IMAGE_OPT, BOTTOM_IMAGE_OPT, TOP_PLACEMENT_OPT, BOTTOM_PLACEMENT_OPT))
 
     def start_color_report(self, project_directory):
         if not self.color_requested():
             return None
         out_dir = os.path.join(project_directory, outputFolder)
+        self.color_out_dir = out_dir
         self.color_report_path = self.options.get(COLOR_REPORT_OPT) or os.path.join(out_dir, 'color_silkscreen_report.json')
         self.color_log_path = self.options.get(COLOR_LOG_OPT) or os.path.join(out_dir, 'color_silkscreen.log')
         setup_logging(self.color_log_path, console=self.wx is None)
@@ -256,15 +257,53 @@ class ProcessThread(Thread):
         if not self.options.get(ALTERNATIVE_EDGE_CUT_OPT) and not self.options.get(EXTEND_EDGE_CUT_OPT):
             expected = self.board_edge_bounds_mm()
         report.step("gerbers", files=sorted(os.listdir(gerber_dir)))
+        images = self.compose_placed_images(report)
         generate_color_silkscreen(
             gerber_dir,
-            top_image=self.options.get(TOP_IMAGE_OPT) or None,
-            bottom_image=self.options.get(BOTTOM_IMAGE_OPT) or None,
+            top_image=images["top"],
+            bottom_image=images["bottom"],
             report=report,
             options=Options(fit=self.options.get(COLOR_FIT_OPT) or "stretch",
                             profile=self.options.get(COLOR_PROFILE_OPT) or "default",
                             debug_svg_dir=self.options.get(COLOR_DEBUG_SVG_OPT) or None,
                             expected_bounds_mm=expected))
+
+    def compose_placed_images(self, report):
+        '''Placed images (editor) -> board-sized 1200 DPI composites clipped to Edge.Cuts.
+        Sides without placement keep the plain image (fitted to the outline box).'''
+        from .color_silkscreen import board_view, placement as pl
+
+        images = {"top": self.options.get(TOP_IMAGE_OPT) or None, "bottom": self.options.get(BOTTOM_IMAGE_OPT) or None}
+        placements = {"top": pl.normalize(self.options.get(TOP_PLACEMENT_OPT)),
+                      "bottom": pl.normalize(self.options.get(BOTTOM_PLACEMENT_OPT))}
+        if not any(placements.values()):
+            return images
+        if self.options.get(ALTERNATIVE_EDGE_CUT_OPT):
+            report.warn({"code": "W_PLACEMENT_ALT_EDGE",
+                         "message": "Placement calculé sur Edge.Cuts alors que User.2 sert de contour."})
+        view = board_view.extract(self.process_manager.board)
+        for side in ("top", "bottom"):
+            p = placements[side]
+            if not p:
+                continue
+            if images[side] and os.path.normcase(os.path.abspath(images[side])) != os.path.normcase(os.path.abspath(p["image"])):
+                report.warn({"code": "W_PLACEMENT_IGNORED",
+                             "message": "Placement {} ignoré : il concerne {} et non {}.".format(
+                                 side, os.path.basename(p["image"]), os.path.basename(images[side]))})
+                continue
+            from PIL import Image
+            with Image.open(p["image"]) as im:
+                dpi = pl.effective_dpi(p, im.size)
+            canvas = pl.compose(view, side, p)
+            path, preview = pl.save_composite(canvas, self.color_out_dir, side)
+            report.step("compose_" + side, image=p["image"], placement_mm=p, source_dpi=round(dpi, 1),
+                        composite=path, pixels=list(canvas.size))
+            if dpi < 150:
+                report.warn({"code": "W_IMAGE_LOW_DPI",
+                             "message": "Image {} imprimée à {:.0f} DPI effectifs (< 150) : rendu flou probable.".format(side, dpi)})
+            images[side] = path
+        pl.save_placements(os.path.join(self.color_out_dir, "color_placement.json"), placements, view)
+        return images
 
     def record_archive(self, report):
         import zipfile

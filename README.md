@@ -27,7 +27,7 @@ python tools/build_pcm.py
 ```
 
 Puis dans KiCad 10 : *Gestionnaire de plugins et de contenus → Installer depuis un fichier…* →
-`out/fabrication-toolkit-color-0.1.0.zip`.
+`dist/fabrication-toolkit-color-0.2.0.zip`.
 
 **Copie de développement** : copier (ou lier) le dossier `plugins/` dans
 `%USERPROFILE%\Documents\KiCad\10.0\scripting\plugins\fabrication_toolkit_color\`, puis *Outils → Plugins externes →
@@ -45,9 +45,32 @@ Les réglages habituels de Fabrication Toolkit sont suivis de :
 - **Image face dessous** : PNG/JPG, **telle qu'on la voit en retournant la carte** (le plugin applique le miroir).
 - **Conserver les proportions** : ajoute des marges (transparentes en PNG, blanches en JPG) au lieu de déformer.
 
-Les chemins sont mémorisés par carte dans `fabrication-toolkit-options.json`. Résultat dans `production/` :
+- **Placer / redimensionner les images…** : ouvre l'éditeur visuel (voir ci-dessous).
+
+Les chemins et placements sont mémorisés par carte dans `fabrication-toolkit-options.json`. Résultat dans `production/` :
 `<nom>.zip`, `color_silkscreen_report.json` et `color_silkscreen.log`. En cas d'erreur, une fenêtre affiche le
 code, le message et une piste de correction.
+
+### Éditeur de placement (vues dessus / dessous)
+
+La carte y est dessinée comme JLCPCB la fabriquera : vernis blanc, cuivre nu doré (aucune encre n'y est
+déposée), composants de la face en gris, contour Edge.Cuts en vert.
+
+- **Vue de dessus / Vue de dessous** : la vue de dessous montre la carte retournée (miroir), telle qu'on la regarde.
+- **Charger une image…** : l'image arrive entière, centrée, dans le contour.
+- Souris : glisser pour **déplacer**, tirer un **coin** pour redimensionner (proportions gardées ; Maj ou
+  « Proportions libres » pour déformer), **molette** pour agrandir/réduire autour du curseur. Flèches : 0,1 mm
+  (Maj : 1 mm).
+- Boutons **Contenir** (image entière dans le contour), **Couvrir** (remplit tout le contour), **Centrer**,
+  **Rotation 90°**, **Retirer**. Champs Centre X/Y, Largeur, Hauteur en mm, et résolution effective (DPI, en rouge
+  sous 150).
+- **Aperçu découpé au contour** : montre déjà ce qui restera.
+
+À la génération, chaque image placée est rendue à 1200 DPI sur toute la carte, puis **tout ce qui sort du contour
+fermé Edge.Cuts (et des découpes internes) est retiré**. Cette image découpée est celle qui est chiffrée dans
+`.FCTS` / `.FCBS` du ZIP, avec sa position. Copies lisibles dans `production/` :
+`color_top_composite.png`, `color_bottom_composite.png` (ou `.jpg` au-delà de 3 Mo) et `color_placement.json`.
+Ces fichiers restent **hors** du ZIP envoyé à JLCPCB, pour ne pas perturber leur contrôle des fichiers.
 
 ### En ligne de commande (sans interface)
 
@@ -61,6 +84,7 @@ code, le message et une piste de correction.
 | `--colorFit stretch\|contain` | déformer l'image au format de la carte (défaut) ou ajouter des marges |
 | `--colorProfile default\|transjlc` | `transjlc` reproduit la sortie de TransJLC 0.4.0, bugs compris (voir TESTS.md) |
 | `--report PATH`, `--log PATH` | rapport JSON et log (défaut : dans `production/`) |
+| `--placement FILE` | placements de l'éditeur (`color_placement.json`) : position, taille et rotation par face |
 | `--debugSvg DIR` | écrit aussi les SVG **en clair** (avant chiffrement) pour les inspecter dans un navigateur |
 
 Code de sortie : `0` si tout va bien, `1` en cas d'échec (détail dans le rapport), `2` si `pcbnew` est introuvable.
@@ -137,6 +161,9 @@ plugins/
     crypto.py          # RSA-OAEP-SHA256 + AES-128-GCM (nonce 16 octets)
     marker.py          # .FCBM (Gerber des repères)
     image.py           # validation, 1200 DPI, proportions
+    board_view.py      # contour, pastilles, composants (pcbnew -> données simples)
+    placement.py       # composition 1200 DPI + découpe au contour Edge.Cuts
+  placement_dialog.py  # éditeur wx (vues dessus/dessous)
 ```
 
 Fichiers couleur : `RSA-OAEP(clé AES) ‖ RSA-OAEP(IV) ‖ AES-128-GCM(SVG) ‖ tag`, avec la clé publique de JLCPCB.

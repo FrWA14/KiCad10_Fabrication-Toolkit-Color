@@ -40,6 +40,7 @@ if __name__ == '__main__':
     parser.add_argument("--colorProfile",       choices=["default", "transjlc"], default="default", help="'transjlc' reproduces TransJLC 0.4.0 output")
     parser.add_argument("--report",             type=str, help="Write the colour silkscreen report (JSON) here", metavar="PATH")
     parser.add_argument("--log",                type=str, help="Colour silkscreen log file", metavar="PATH")
+    parser.add_argument("--placement",          type=str, help="Placement JSON from the editor (color_placement.json): position/size per face", metavar="FILE")
     parser.add_argument("--debugSvg",           type=str, help="Also write the plaintext colour SVGs to this folder", metavar="DIR")
     args = parser.parse_args()
 
@@ -67,6 +68,11 @@ if __name__ == '__main__':
     options[COLOR_REPORT_OPT] = os.path.abspath(args.report) if args.report else None
     options[COLOR_LOG_OPT] = os.path.abspath(args.log) if args.log else None
     options[COLOR_DEBUG_SVG_OPT] = os.path.abspath(args.debugSvg) if args.debugSvg else None
+    if args.placement:
+        from .color_silkscreen.placement import load_placements
+        placements = load_placements(args.placement)
+        options[TOP_PLACEMENT_OPT] = placements["top"]
+        options[BOTTOM_PLACEMENT_OPT] = placements["bottom"]
 
     openBrowser = args.openBrowser
     nonInteractive = args.nonInteractive

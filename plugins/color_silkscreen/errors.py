@@ -13,6 +13,7 @@ HINTS = {
     "E_BOARD_TOO_LARGE_ADJUST": "Le contour Gerber et l'image couleur diffèrent de plus de 2 mm : "
                                 "vérifier Edge.Cuts, l'origine auxiliaire et les options User.1/User.2.",
     "E_GERBER_MISSING": "Le jeu de Gerbers est incomplet ; vérifier les couches activées.",
+    "E_PLACEMENT": "Corriger le placement (taille > 0, rotation 0/90/180/270) dans l'éditeur de placement.",
     "E_INTERNAL": "Erreur inattendue ; joindre color_silkscreen.log au rapport de bug.",
 }
 

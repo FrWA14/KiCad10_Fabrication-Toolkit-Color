@@ -35,6 +35,8 @@ CASES = [
      {"zip_has": ["Gerber_InnerLayer1.G1", "Gerber_InnerLayer2.G2"]}),
     ("T6-no-outline", "T6", "logo.png", None, [], "error", "E_OUTLINE_MISSING", [], {}),
     ("T7-huge", "T7", "huge.png", None, [], "ok", None, ["W_IMAGE_RESAMPLED"], {}),
+    ("T3-placement", "T3", None, None, ["--placement", "AUTO"], "ok", None, [],
+     {"compose": ["top", "bottom"], "bounds": [100, -110, 150, -80]}),
     ("T7-contain", "T7", "logo.png", None, ["--colorFit", "contain"], "ok", None, ["W_IMAGE_PADDED"], {}),
 ]
 
@@ -54,6 +56,14 @@ def run_case(case):
         cmd += ["--topColorImage", os.path.join(IMAGES, top)]
     if bottom:
         cmd += ["--bottomColorImage", os.path.join(IMAGES, bottom)]
+    if "AUTO" in cmd:  # placement made in the editor frame: logo top-left on top, photo covering the bottom
+        placement = os.path.join(work, "placement.json")
+        with open(placement, "w", encoding="utf-8") as fh:
+            json.dump({"top": {"image": os.path.join(IMAGES, "logo.png"), "cx": 15, "cy": 10, "w": 20, "h": 12, "rot": 0},
+                       "bottom": {"image": os.path.join(IMAGES, "photo.jpg"), "cx": 25, "cy": 15, "w": 60, "h": 36,
+                                  "rot": 90}}, fh)
+        cmd[cmd.index("AUTO")] = placement
+        top, bottom = "logo.png (placé)", "photo.jpg (placé, 90°)"
     proc = subprocess.run(cmd, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     result = {"id": cid, "board": board, "top": top, "bottom": bottom, "args": extra,
               "exit_code": proc.returncode, "problems": []}
@@ -96,6 +106,11 @@ def run_case(case):
                 for side in ("top", "bottom"):
                     if "encrypt_" + side in steps:
                         result["bytes_" + side] = steps["encrypt_" + side]["bytes"]
+            for side in checks.get("compose", []):
+                if "compose_" + side not in steps:
+                    problems.append("no compose_" + side)
+                elif not os.path.exists(os.path.join(work, "production", "color_placement.json")):
+                    problems.append("color_placement.json missing")
             for key in ("mask_top", "mask_bottom"):
                 if key in checks and steps.get(key, {}).get("openings") != checks[key]:
                     problems.append("{} openings {} != {}".format(key, steps.get(key, {}).get("openings"), checks[key]))
