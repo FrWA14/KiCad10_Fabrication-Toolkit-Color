@@ -14,7 +14,14 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 def main():
     with open(os.path.join(ROOT, "metadata.json"), encoding="utf-8") as fh:
         meta = json.load(fh)
-    version = meta["versions"][0]["version"]
+    ns = {}
+    with open(os.path.join(ROOT, "plugins", "version.py"), encoding="utf-8") as fh:
+        exec(fh.read(), ns)
+    version = ns["VERSION"]
+    meta["versions"][0]["version"] = version
+    with open(os.path.join(ROOT, "metadata.json"), "w", encoding="utf-8", newline="
+") as fh:
+        json.dump(meta, fh, indent=4, ensure_ascii=False)
     out = os.path.join(ROOT, "out", "fabrication-toolkit-color-{}.zip".format(version))
     os.makedirs(os.path.dirname(out), exist_ok=True)
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:

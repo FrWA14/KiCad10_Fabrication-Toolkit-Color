@@ -11,7 +11,8 @@ import os
 import wx
 
 from .color_silkscreen import placement as pl
-from .color_silkscreen.board_view import side_geometry
+from .version import VERSION
+from .color_silkscreen.board_view import side_geometry, view_x
 
 HANDLE_PX = 7
 SIDE_LABELS = ("Vue de dessus", "Vue de dessous (carte retournée)")
@@ -31,7 +32,7 @@ class PlacementCanvas(wx.Panel):
         self.opacity = 0.85
         self.clip_preview = True
         self.show_components = True
-        self.show_silk = True
+        self.show_silk = {"top": True, "bottom": True}   # F.Silkscreen / B.Silkscreen
         self.free_ratio = False
         self._images = {}                     # path -> wx.Image (preview resolution)
         self._bitmaps = {}                    # (path, rot, opacity) -> wx.Bitmap
@@ -155,17 +156,22 @@ class PlacementCanvas(wx.Panel):
                 if self.clip_preview:
                     gc.PopState()
 
-        # silkscreen of this face, black on the white mask (above the colour image)
-        if self.show_silk and geo["silk"]:
+        # silkscreen: this face in black on the white mask (above the colour image),
+        # the other face as a faint grey "see-through" like KiCad's back layers
+        other = "bottom" if self.side == "top" else "top"
+        for layer_side, colour in ((other, wx.Colour(120, 120, 130, 70)), (self.side, wx.Colour(20, 20, 20))):
+            chains = self.view.get("silk", {}).get(layer_side, [])
+            if not self.show_silk[layer_side] or not chains:
+                continue
             silk = gc.CreatePath()
-            for chain in geo["silk"]:
-                pts = [self.to_px(x, y, t) for x, y in chain]
+            for chain in chains:
+                pts = [self.to_px(view_x(self.view, self.side, x), y, t) for x, y in chain]
                 silk.MoveToPoint(*pts[0])
                 for q in pts[1:]:
                     silk.AddLineToPoint(*q)
                 silk.CloseSubpath()
             gc.SetPen(wx.TRANSPARENT_PEN)
-            gc.SetBrush(wx.Brush(wx.Colour(20, 20, 20)))
+            gc.SetBrush(wx.Brush(colour))
             gc.FillPath(silk, wx.WINDING_RULE)
 
         # bare copper of this face (no ink is printed there)
@@ -295,7 +301,7 @@ class PlacementCanvas(wx.Panel):
 
 class PlacementDialog(wx.Dialog):
     def __init__(self, parent, view, placements):
-        super().__init__(parent, title="Sérigraphie couleur — placement des images",
+        super().__init__(parent, title="Sérigraphie couleur — placement des images (v{})".format(VERSION),
                          style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
         self.view = view
         self.placements = {s: (dict(placements[s]) if placements.get(s) else None) for s in SIDES}
@@ -335,12 +341,23 @@ class PlacementDialog(wx.Dialog):
         self.chk_clip.SetValue(True)
         self.chk_fp = wx.CheckBox(self, label="Afficher les composants")
         self.chk_fp.SetValue(True)
-        self.chk_silk = wx.CheckBox(self, label="Afficher la sérigraphie")
-        self.chk_silk.SetValue(True)
-        self.chk_silk.SetToolTip("Sérigraphie F/B.Silkscreen en noir, au-dessus de l'image")
+        layers = wx.BoxSizer(wx.HORIZONTAL)
+        layers.Add(wx.StaticText(self, label="Sérigraphie :"), 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
+        self.chk_silk = {}
+        for side, label, tip in (("top", "F.Silkscreen", "Sérigraphie du dessus : noire en vue de dessus, grisée en vue de dessous"),
+                                 ("bottom", "B.Silkscreen", "Sérigraphie du dessous : noire en vue de dessous, grisée en vue de dessus")):
+            chk = wx.CheckBox(self, label=label)
+            chk.SetValue(True)
+            chk.SetToolTip(tip)
+            chk.Bind(wx.EVT_CHECKBOX, self.on_options)
+            layers.Add(chk, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 12)
+            self.chk_silk[side] = chk
+        n_silk = {s: len(view.get("silk", {}).get(s, [])) for s in SIDES}
+        layers.Add(wx.StaticText(self, label="({} forme(s) dessus, {} dessous)".format(n_silk["top"], n_silk["bottom"])),
+                   0, wx.ALIGN_CENTER_VERTICAL)
         self.opacity = wx.Slider(self, value=85, minValue=20, maxValue=100, size=wx.Size(120, -1))
         self.opacity.SetToolTip("Opacité de l'aperçu (export toujours à 100 %)")
-        for c in (self.chk_free, self.chk_clip, self.chk_fp, self.chk_silk):
+        for c in (self.chk_free, self.chk_clip, self.chk_fp):
             opts.Add(c, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 12)
             c.Bind(wx.EVT_CHECKBOX, self.on_options)
         opts.Add(wx.StaticText(self, label="Opacité"), 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
@@ -364,6 +381,7 @@ class PlacementDialog(wx.Dialog):
         s.Add(self.canvas, 1, wx.EXPAND | wx.ALL, 6)
         s.Add(values, 0, wx.LEFT | wx.RIGHT, 6)
         s.Add(opts, 0, wx.ALL, 6)
+        s.Add(layers, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
         s.Add(hint, 0, wx.LEFT | wx.RIGHT, 6)
         s.Add(bottom, 0, wx.ALL | wx.ALIGN_RIGHT, 6)
         self.SetSizerAndFit(s)
@@ -417,7 +435,7 @@ class PlacementDialog(wx.Dialog):
         self.canvas.free_ratio = self.chk_free.GetValue()
         self.canvas.clip_preview = self.chk_clip.GetValue()
         self.canvas.show_components = self.chk_fp.GetValue()
-        self.canvas.show_silk = self.chk_silk.GetValue()
+        self.canvas.show_silk = {side: chk.GetValue() for side, chk in self.chk_silk.items()}
         self.canvas.opacity = self.opacity.GetValue() / 100.0
         self.canvas.Refresh()
 

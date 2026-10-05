@@ -31,7 +31,13 @@ from plugins.options import COLOR_FIT_OPT, TOP_IMAGE_OPT, BOTTOM_IMAGE_OPT  # no
 
 def main():
     app = wx.App(False)
+    global plugin_module
     plugin_module.Plugin()
+    import plugins.placement_dialog  # noqa: F401  (loaded, as after a first use in KiCad)
+    form_class = plugin_module.reload_package()  # what Plugin.Run() does on every launch
+    plugin_module = sys.modules["plugins.plugin"]
+    assert form_class is plugin_module.KiCadToJLCForm
+    print("reload ok, version", sys.modules["plugins.version"].VERSION)
     captured = {}
     plugin_module.ProcessThread = lambda wxobj, options, openBrowser=True: captured.update(options)
     plugin_module.save_user_options = lambda options: None  # don't write next to the test board

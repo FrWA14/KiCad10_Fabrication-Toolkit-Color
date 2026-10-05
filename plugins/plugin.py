@@ -7,6 +7,7 @@ from .thread import ProcessThread
 from .events import StatusEvent
 from .options import AUTO_FILL_OPT, AUTO_TRANSLATE_OPT, EXCLUDE_DNP_OPT, EXTEND_EDGE_CUT_OPT, ALTERNATIVE_EDGE_CUT_OPT, EXTRA_LAYERS, ALL_ACTIVE_LAYERS_OPT, ARCHIVE_NAME, OPEN_BROWSER_OPT, BACKUP_OPT
 from .options import TOP_IMAGE_OPT, BOTTOM_IMAGE_OPT, COLOR_FIT_OPT, COLOR_PROFILE_OPT, TOP_PLACEMENT_OPT, BOTTOM_PLACEMENT_OPT
+from .version import VERSION
 from .utils import load_user_options, save_user_options, get_layer_names
 
 
@@ -17,7 +18,7 @@ class KiCadToJLCForm(wx.Frame):
             self,
             None,
             id=wx.ID_ANY,
-            title=u"Fabrication Toolkit (Color)",
+            title=u"Fabrication Toolkit (Color) v" + VERSION,
             pos=wx.DefaultPosition,
             size=wx.DefaultSize,
             style=wx.DEFAULT_DIALOG_STYLE)
@@ -259,4 +260,33 @@ class Plugin(pcbnew.ActionPlugin):
         self.dark_icon_file_name = os.path.join(os.path.dirname(__file__), 'icon.png')
 
     def Run(self):
-        KiCadToJLCForm().Show()
+        # KiCad keeps imported modules for the whole session: after an update through
+        # the Plugin Manager the old code would keep running until KiCad restarts.
+        # Reload this package (leaves first) so every launch uses the installed files.
+        form = reload_package()
+        form().Show()
+
+
+RELOAD_ORDER = [
+    "version", "color_silkscreen.errors", "color_silkscreen.numfmt", "color_silkscreen.report",
+    "color_silkscreen.gerber", "color_silkscreen.outline", "color_silkscreen.mask", "color_silkscreen.svg_builder",
+    "color_silkscreen.crypto", "color_silkscreen.marker", "color_silkscreen.jlc_convert", "color_silkscreen.image",
+    "color_silkscreen.board_view", "color_silkscreen.placement", "color_silkscreen.generate", "color_silkscreen",
+    "options", "config", "utils", "events", "process", "thread", "placement_dialog", "plugin",
+]
+
+
+def reload_package():
+    import importlib
+    import logging
+    import sys
+    package = __name__.rsplit(".", 1)[0]
+    for name in RELOAD_ORDER:
+        module = sys.modules.get(package + "." + name)
+        if module is None:
+            continue
+        try:
+            importlib.reload(module)
+        except Exception as e:  # keep the already-loaded version rather than failing
+            logging.getLogger().warning("Fabrication Toolkit Color: reload %s failed: %r", name, e)
+    return sys.modules[package + ".plugin"].KiCadToJLCForm
