@@ -31,6 +31,7 @@ class PlacementCanvas(wx.Panel):
         self.opacity = 0.85
         self.clip_preview = True
         self.show_components = True
+        self.show_silk = True
         self.free_ratio = False
         self._images = {}                     # path -> wx.Image (preview resolution)
         self._bitmaps = {}                    # (path, rot, opacity) -> wx.Bitmap
@@ -153,6 +154,19 @@ class PlacementCanvas(wx.Panel):
                 gc.DrawBitmap(bmp, x0, y0, x1 - x0, y1 - y0)
                 if self.clip_preview:
                     gc.PopState()
+
+        # silkscreen of this face, black on the white mask (above the colour image)
+        if self.show_silk and geo["silk"]:
+            silk = gc.CreatePath()
+            for chain in geo["silk"]:
+                pts = [self.to_px(x, y, t) for x, y in chain]
+                silk.MoveToPoint(*pts[0])
+                for q in pts[1:]:
+                    silk.AddLineToPoint(*q)
+                silk.CloseSubpath()
+            gc.SetPen(wx.TRANSPARENT_PEN)
+            gc.SetBrush(wx.Brush(wx.Colour(20, 20, 20)))
+            gc.FillPath(silk, wx.WINDING_RULE)
 
         # bare copper of this face (no ink is printed there)
         gc.SetBrush(wx.Brush(wx.Colour(214, 172, 70)))
@@ -321,9 +335,12 @@ class PlacementDialog(wx.Dialog):
         self.chk_clip.SetValue(True)
         self.chk_fp = wx.CheckBox(self, label="Afficher les composants")
         self.chk_fp.SetValue(True)
+        self.chk_silk = wx.CheckBox(self, label="Afficher la sérigraphie")
+        self.chk_silk.SetValue(True)
+        self.chk_silk.SetToolTip("Sérigraphie F/B.Silkscreen en noir, au-dessus de l'image")
         self.opacity = wx.Slider(self, value=85, minValue=20, maxValue=100, size=wx.Size(120, -1))
         self.opacity.SetToolTip("Opacité de l'aperçu (export toujours à 100 %)")
-        for c in (self.chk_free, self.chk_clip, self.chk_fp):
+        for c in (self.chk_free, self.chk_clip, self.chk_fp, self.chk_silk):
             opts.Add(c, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 12)
             c.Bind(wx.EVT_CHECKBOX, self.on_options)
         opts.Add(wx.StaticText(self, label="Opacité"), 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
@@ -400,6 +417,7 @@ class PlacementDialog(wx.Dialog):
         self.canvas.free_ratio = self.chk_free.GetValue()
         self.canvas.clip_preview = self.chk_clip.GetValue()
         self.canvas.show_components = self.chk_fp.GetValue()
+        self.canvas.show_silk = self.chk_silk.GetValue()
         self.canvas.opacity = self.opacity.GetValue() / 100.0
         self.canvas.Refresh()
 

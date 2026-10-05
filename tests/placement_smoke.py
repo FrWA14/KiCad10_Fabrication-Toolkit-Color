@@ -78,6 +78,18 @@ def main():
     for side in ("top", "bottom"):
         dlg.set_side(side)
         c.render_to_bitmap(900, 900).SaveFile(os.path.join(OUT, "editor_{}.png".format(side)), wx.BITMAP_TYPE_PNG)
+    # silkscreen toggle: rendering differs when the board has silk on that face
+    dlg.set_side("top")
+    with_silk = c.render_to_bitmap(300, 300).ConvertToImage().GetData()
+    dlg.chk_silk.SetValue(False)
+    dlg.on_options(None)
+    without = c.render_to_bitmap(300, 300).ConvertToImage().GetData()
+    c.render_to_bitmap(900, 900).SaveFile(os.path.join(OUT, "editor_top_nosilk.png"), wx.BITMAP_TYPE_PNG)
+    has_silk = bool(view["silk"]["top"])
+    print("     silkscreen polygons: top", len(view["silk"]["top"]), "bottom", len(view["silk"]["bottom"]))
+    check((with_silk != without) == has_silk, "silkscreen show/hide checkbox", failures)
+    dlg.chk_silk.SetValue(True)
+    dlg.on_options(None)
 
     result = dlg.result()
     check(set(result) == {"top", "bottom"} and all(result.values()), "dialog result", failures)

@@ -62,6 +62,9 @@ def extract(board):
             {"ref": fp.GetReference(), "x": a[0], "y": a[1],
              "w": round(mm(bbox.GetWidth()), 4), "h": round(mm(bbox.GetHeight()), 4)})
 
+    silk = {side: [[local(p) for p in chain] for chain in _silk_polygons(board, layer)]
+            for side, layer in (("top", pcbnew.F_SilkS), ("bottom", pcbnew.B_SilkS))}
+
     return {
         "width": round(width, 4), "height": round(height, 4),
         "origin_mm": (round(x0, 4), round(y0, 4)),
@@ -69,7 +72,41 @@ def extract(board):
         "holes": [[local(p) for p in h] for h in holes],
         "pads": pads,
         "footprints": footprints,
+        "silk": silk,
     }
+
+
+def _silk_polygons(board, layer):
+    """Silkscreen of one layer (graphics, texts, footprint fields) as filled polygons
+    in board mm. Fractured: every chain is a simple outline (holes bridged)."""
+    import pcbnew  # type: ignore
+
+    polys = pcbnew.SHAPE_POLY_SET()
+    items = list(board.GetDrawings())
+    for fp in board.GetFootprints():
+        items += list(fp.GraphicalItems()) + [fp.Reference(), fp.Value()]
+    for item in items:
+        try:
+            if not item.IsOnLayer(layer) or (hasattr(item, "IsVisible") and not item.IsVisible()):
+                continue
+            cls = item.GetClass()
+            if cls in ("PCB_TEXT", "PCB_FIELD", "PCB_TEXTBOX"):
+                # glyph outlines; TransformShapeToPolygon only gives the text box
+                item.TransformTextToPolySet(polys, 0, pcbnew.FromMM(0.01), pcbnew.ERROR_INSIDE)
+                if cls == "PCB_TEXTBOX" and getattr(item, "IsBorderEnabled", lambda: False)():
+                    item.TransformShapeToPolygon(polys, layer, 0, pcbnew.FromMM(0.01), pcbnew.ERROR_INSIDE)
+            else:
+                item.TransformShapeToPolygon(polys, layer, 0, pcbnew.FromMM(0.01), pcbnew.ERROR_INSIDE)
+        except Exception:  # an exotic item must not prevent the preview
+            continue
+    polys.Simplify()
+    polys.Fracture()
+    mm = pcbnew.ToMM
+    out = []
+    for i in range(polys.OutlineCount()):
+        line = polys.Outline(i)
+        out.append([(mm(line.CPoint(k).x), mm(line.CPoint(k).y)) for k in range(line.PointCount())])
+    return out
 
 
 def view_x(view, side, x):
@@ -87,4 +124,5 @@ def side_geometry(view, side):
         x = view_x(view, side, fp["x"] + (fp["w"] if side == "bottom" else 0))
         fps.append(dict(fp, x=x))
     return {"outlines": [pts(o) for o in view["outlines"]], "holes": [pts(h) for h in view["holes"]],
+            "silk": [pts(c) for c in view.get("silk", {}).get(side, [])],
             "pads": pads, "footprints": fps, "width": view["width"], "height": view["height"]}
