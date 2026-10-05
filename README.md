@@ -27,13 +27,13 @@ python tools/build_pcm.py
 ```
 
 Puis dans KiCad 10 : *Gestionnaire de plugins et de contenus → Installer depuis un fichier…* →
-`dist/fabrication-toolkit-color-0.2.1.zip`.
+`dist/fabrication-toolkit-color-0.2.2.zip`.
 
 **Copie de développement** : copier (ou lier) le dossier `plugins/` dans
 `%USERPROFILE%\Documents\KiCad\10.0\scripting\plugins\fabrication_toolkit_color\`, puis *Outils → Plugins externes →
 Actualiser*.
 
-Le bouton s'appelle **Fabrication Toolkit (Color)**. Il peut coexister avec Fabrication Toolkit d'origine.
+Le bouton s'appelle **Fabrication Toolkit (Color)**. La version utilisée s'affiche dans le titre de la fenêtre. Le plugin recharge son code à chaque ouverture : une mise à jour par le gestionnaire est prise en compte sans redémarrer KiCad (à partir de la 0.2.2 ; depuis une version plus ancienne, redémarrer KiCad une fois). Il peut coexister avec Fabrication Toolkit d'origine.
 
 ## Utilisation
 
@@ -65,7 +65,7 @@ déposée), composants de la face en gris, contour Edge.Cuts en vert.
   **Rotation 90°**, **Retirer**. Champs Centre X/Y, Largeur, Hauteur en mm, et résolution effective (DPI, en rouge
   sous 150).
 - **Aperçu découpé au contour** : montre déjà ce qui restera.
-- **Afficher la sérigraphie** : F/B.Silkscreen en noir sur le blanc (textes, logos, contours), au-dessus de l'image ; à décocher pour voir l'image seule.
+- **Sérigraphie : F.Silkscreen / B.Silkscreen** : la sérigraphie de la face affichée en noir sur le blanc (textes, logos, contours), au-dessus de l'image ; celle de l'autre face en gris léger, en transparence. Décocher pour voir l'image seule.
 
 À la génération, chaque image placée est rendue à 1200 DPI sur toute la carte, puis **tout ce qui sort du contour
 fermé Edge.Cuts (et des découpes internes) est retiré**. Cette image découpée est celle qui est chiffrée dans

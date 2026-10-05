@@ -19,8 +19,7 @@ def main():
         exec(fh.read(), ns)
     version = ns["VERSION"]
     meta["versions"][0]["version"] = version
-    with open(os.path.join(ROOT, "metadata.json"), "w", encoding="utf-8", newline="
-") as fh:
+    with open(os.path.join(ROOT, "metadata.json"), "w", encoding="utf-8", newline="\n") as fh:
         json.dump(meta, fh, indent=4, ensure_ascii=False)
     out = os.path.join(ROOT, "out", "fabrication-toolkit-color-{}.zip".format(version))
     os.makedirs(os.path.dirname(out), exist_ok=True)
