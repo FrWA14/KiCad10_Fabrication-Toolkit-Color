@@ -203,7 +203,9 @@ class JlcConvertTests(unittest.TestCase):
         self.assertIn("Gerber_TopSolderMaskLayer.GTS", names)
         self.assertEqual(sorted(dropped), ["T2-NPTH-drl_map.gbr", "T2-PTH-drl_map.gbr"])
         gts = read(os.path.join(work, "Gerber_TopSolderMaskLayer.GTS"))
-        self.assertTrue(gts.startswith("G04 EasyEDA Pro v2.2.42.2, "))
+        self.assertTrue(gts.startswith("G04 EasyEDA Pro v{}, ".format(jlc_convert.EASYEDA_VERSION)))
+        self.assertTrue(jlc_convert.add_gerber_header("M02*
+", app_version="2.2.42.2").startswith("G04 EasyEDA Pro v2.2.42.2, "))
         self.assertTrue(jlc_convert.verify_hash_aperture(gts))
         self.assertIn("G54D10*", gts)
 
