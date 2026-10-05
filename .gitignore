@@ -8,3 +8,5 @@ tests/img/
 *.log
 production/
 .claude/
+art/_check*
+art/rp2350_chibi_bottom.png

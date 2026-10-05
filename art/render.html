@@ -1,0 +1,15 @@
+<!doctype html><meta charset="utf-8"><title>render</title>
+<body style="background:#222;color:#ddd;font:13px sans-serif">
+<div id="s">rendering…</div><img id="p" style="width:520px;margin:8px">
+<script>
+const q = new URLSearchParams(location.search), src = q.get('src'), px = +q.get('px') || 3596, out = q.get('out');
+(async () => {
+  const img = new Image(); img.src = src + '?t=' + Date.now(); await img.decode();
+  const c = document.createElement('canvas'); c.width = c.height = px;
+  c.getContext('2d').drawImage(img, 0, 0, px, px);
+  const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+  document.getElementById('p').src = URL.createObjectURL(blob);
+  const r = await fetch('/save?name=' + out, {method: 'POST', body: blob});
+  document.getElementById('s').textContent = 'DONE ' + await r.text();
+})().catch(e => document.getElementById('s').textContent = 'ERROR ' + e);
+</script>
