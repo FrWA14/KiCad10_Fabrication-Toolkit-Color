@@ -1,3 +1,4 @@
+# Modified 2026 by Fabrication Toolkit Color: JLCPCB multi-colour silkscreen support (see NOTICE).
 import os
 import wx
 import pcbnew  # type: ignore

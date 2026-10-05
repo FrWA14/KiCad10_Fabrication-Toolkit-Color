@@ -1,3 +1,4 @@
+# Modified 2026 by Fabrication Toolkit Color: JLCPCB multi-colour silkscreen support (see NOTICE).
 import os
 import wx
 import pcbnew  # type: ignore
@@ -5,6 +6,7 @@ import pcbnew  # type: ignore
 from .thread import ProcessThread
 from .events import StatusEvent
 from .options import AUTO_FILL_OPT, AUTO_TRANSLATE_OPT, EXCLUDE_DNP_OPT, EXTEND_EDGE_CUT_OPT, ALTERNATIVE_EDGE_CUT_OPT, EXTRA_LAYERS, ALL_ACTIVE_LAYERS_OPT, ARCHIVE_NAME, OPEN_BROWSER_OPT, BACKUP_OPT
+from .options import TOP_IMAGE_OPT, BOTTOM_IMAGE_OPT, COLOR_FIT_OPT, COLOR_PROFILE_OPT
 from .utils import load_user_options, save_user_options, get_layer_names
 
 
@@ -15,7 +17,7 @@ class KiCadToJLCForm(wx.Frame):
             self,
             None,
             id=wx.ID_ANY,
-            title=u"Fabrication Toolkit",
+            title=u"Fabrication Toolkit (Color)",
             pos=wx.DefaultPosition,
             size=wx.DefaultSize,
             style=wx.DEFAULT_DIALOG_STYLE)
@@ -38,7 +40,12 @@ class KiCadToJLCForm(wx.Frame):
             EXCLUDE_DNP_OPT: False,
             OPEN_BROWSER_OPT: True,
             BACKUP_OPT: True,
+            TOP_IMAGE_OPT: "",
+            BOTTOM_IMAGE_OPT: "",
+            COLOR_FIT_OPT: "stretch",
+            COLOR_PROFILE_OPT: "default",
         })
+        self.userOptions = userOptions
 
         self.mOptionsLabel = wx.StaticText(self, label='Options:')
         # self.mOptionsSeparator = wx.StaticLine(self)
@@ -70,6 +77,21 @@ class KiCadToJLCForm(wx.Frame):
         self.mBackupCheckbox = wx.CheckBox(self, label='Generate backup files')
         self.mBackupCheckbox.SetValue(userOptions[BACKUP_OPT])
 
+        imageWildcard = "Images PNG/JPG (*.png;*.jpg;*.jpeg)|*.png;*.jpg;*.jpeg"
+        self.mColorLabel = wx.StaticText(self, label='Sérigraphie couleur JLCPCB (optionnel) :')
+        self.mTopImagePicker = wx.FilePickerCtrl(self, message="Image couleur, face dessus", wildcard=imageWildcard,
+                                                 size=wx.Size(600, -1), style=wx.FLP_OPEN | wx.FLP_FILE_MUST_EXIST | wx.FLP_USE_TEXTCTRL)
+        self.mTopImagePicker.SetPath(userOptions[TOP_IMAGE_OPT] or "")
+        self.mTopImagePicker.SetToolTip("Face dessus, vue de dessus. Laisser vide : pas d'impression couleur.")
+        self.mBottomImagePicker = wx.FilePickerCtrl(self, message="Image couleur, face dessous (vue de dessous)", wildcard=imageWildcard,
+                                                    size=wx.Size(600, -1), style=wx.FLP_OPEN | wx.FLP_FILE_MUST_EXIST | wx.FLP_USE_TEXTCTRL)
+        self.mBottomImagePicker.SetPath(userOptions[BOTTOM_IMAGE_OPT] or "")
+        self.mBottomImagePicker.SetToolTip("Face dessous, telle qu'on la voit en retournant la carte.")
+        self.mTopImageLabel = wx.StaticText(self, label='Image face dessus :')
+        self.mBottomImageLabel = wx.StaticText(self, label='Image face dessous (vue de dessous) :')
+        self.mColorFitCheckbox = wx.CheckBox(self, label="Conserver les proportions de l'image (ajoute des marges)")
+        self.mColorFitCheckbox.SetValue(userOptions[COLOR_FIT_OPT] == "contain")
+
         self.mGaugeStatus = wx.Gauge(
             self, wx.ID_ANY, 100, wx.DefaultPosition, wx.Size(600, 20), wx.GA_HORIZONTAL)
         self.mGaugeStatus.SetValue(0)
@@ -92,6 +114,12 @@ class KiCadToJLCForm(wx.Frame):
         boxSizer.Add(self.mExcludeDnpCheckbox, 0, wx.ALL, 5)
         boxSizer.Add(self.mOpenBrowserCheckbox, 0, wx.ALL, 5)
         boxSizer.Add(self.mBackupCheckbox, 0, wx.ALL, 5)
+        boxSizer.Add(self.mColorLabel, 0, wx.ALL, 5)
+        boxSizer.Add(self.mTopImageLabel, 0, wx.LEFT | wx.RIGHT, 5)
+        boxSizer.Add(self.mTopImagePicker, 0, wx.ALL, 5)
+        boxSizer.Add(self.mBottomImageLabel, 0, wx.LEFT | wx.RIGHT, 5)
+        boxSizer.Add(self.mBottomImagePicker, 0, wx.ALL, 5)
+        boxSizer.Add(self.mColorFitCheckbox, 0, wx.ALL, 5)
         boxSizer.Add(self.mGaugeStatus, 0, wx.ALL, 5)
         boxSizer.Add(self.mGenerateButton, 0, wx.ALL, 5)
 
@@ -123,6 +151,10 @@ class KiCadToJLCForm(wx.Frame):
         options[EXCLUDE_DNP_OPT] = self.mExcludeDnpCheckbox.GetValue()
         options[OPEN_BROWSER_OPT] = self.mOpenBrowserCheckbox.GetValue()
         options[BACKUP_OPT] = self.mBackupCheckbox.GetValue()
+        options[TOP_IMAGE_OPT] = self.mTopImagePicker.GetPath().strip()
+        options[BOTTOM_IMAGE_OPT] = self.mBottomImagePicker.GetPath().strip()
+        options[COLOR_FIT_OPT] = "contain" if self.mColorFitCheckbox.GetValue() else "stretch"
+        options[COLOR_PROFILE_OPT] = self.userOptions.get(COLOR_PROFILE_OPT) or "default"  # set by hand in the options file
 
         save_user_options(options)
 
@@ -137,6 +169,9 @@ class KiCadToJLCForm(wx.Frame):
         self.mExcludeDnpCheckbox.Hide()
         self.mOpenBrowserCheckbox.Hide()
         self.mBackupCheckbox.Hide()
+        for control in (self.mColorLabel, self.mTopImageLabel, self.mTopImagePicker, self.mBottomImageLabel,
+                        self.mBottomImagePicker, self.mColorFitCheckbox):
+            control.Hide()
         self.mGenerateButton.Hide()
         self.mGaugeStatus.Show()
 
@@ -158,9 +193,9 @@ class KiCadToJLCForm(wx.Frame):
 # Plugin definition
 class Plugin(pcbnew.ActionPlugin):
     def __init__(self):
-        self.name = "Fabrication Toolkit"
+        self.name = "Fabrication Toolkit (Color)"
         self.category = "Manufacturing"
-        self.description = "Toolkit for automating PCB fabrication process with KiCad and JLC PCB"
+        self.description = "Fabrication Toolkit + JLCPCB multi-colour silkscreen from a PNG/JPG image"
         self.pcbnew_icon_support = hasattr(self, "show_toolbar_button")
         self.show_toolbar_button = True
         self.icon_file_name = os.path.join(os.path.dirname(__file__), 'icon.png')

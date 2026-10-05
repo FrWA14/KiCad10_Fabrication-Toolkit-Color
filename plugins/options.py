@@ -1,3 +1,4 @@
+# Modified 2026 by Fabrication Toolkit Color: JLCPCB multi-colour silkscreen support (see NOTICE).
 AUTO_TRANSLATE_OPT = "AUTO TRANSLATE"
 AUTO_FILL_OPT = "AUTO FILL"
 EXCLUDE_DNP_OPT = "EXCLUDE DNP"

@@ -1,0 +1,30 @@
+Fabrication Toolkit Color
+=========================
+
+This product is a modified version of Fabrication Toolkit.
+
+Fabrication Toolkit
+  Copyright Benny Megidish and contributors
+  https://github.com/bennymeg/Fabrication-Toolkit (commit 7f627b6b)
+  Licensed under the Apache License, Version 2.0 (see LICENSE).
+  Modified files carry a "Modified" notice: plugins/cli.py, plugins/options.py,
+  plugins/plugin.py, plugins/thread.py, metadata.json.
+
+plugins/color_silkscreen/ is a Python port of the "colorful" module and of the
+Gerber conversion of TransJLC.
+
+TransJLC
+  Copyright HalfSweet <HalfSweet@HalfSweet.cn> and contributors
+  https://github.com/HalfSweet/TransJLC (version 0.4.0)
+  Licensed under the Apache License, Version 2.0
+  (see plugins/color_silkscreen/LICENSE-TransJLC).
+  plugins/color_silkscreen/assets/order_notice.txt is copied unchanged from
+  TransJLC's Assets/PCB下单必读.txt. The test vectors in tests/fixtures/transjlc/
+  come from TransJLC's tests/data/colorful/ (line endings normalised to LF).
+
+Overprint (https://github.com/Dirdmaster/overprint, MIT) was read as a point of
+comparison only; no code was copied from it.
+
+The JLCPCB colour-file format is unofficial and was reverse engineered by the
+projects above. JLCPCB and EasyEDA are trademarks of their respective owners;
+this project is not affiliated with or endorsed by them.
