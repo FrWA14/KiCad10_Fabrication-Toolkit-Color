@@ -9,3 +9,12 @@ OPEN_BROWSER_OPT = "OPEN BROWSER"
 ARCHIVE_NAME = "ARCHIVE_NAME"
 EXTRA_LAYERS = "EXTRA_LAYERS"
 BACKUP_OPT = "BACKUP_OPT"
+
+# Colour silkscreen (JLCPCB multi-colour)
+TOP_IMAGE_OPT = "TOP_COLOR_IMAGE"
+BOTTOM_IMAGE_OPT = "BOTTOM_COLOR_IMAGE"
+COLOR_FIT_OPT = "COLOR_FIT"            # 'stretch' | 'contain'
+COLOR_PROFILE_OPT = "COLOR_PROFILE"    # 'default' | 'transjlc'
+COLOR_REPORT_OPT = "COLOR_REPORT"      # report.json path (CLI)
+COLOR_LOG_OPT = "COLOR_LOG"            # log path (CLI)
+COLOR_DEBUG_SVG_OPT = "COLOR_DEBUG_SVG"  # dump plaintext SVGs to this folder

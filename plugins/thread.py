@@ -12,22 +12,28 @@ from .process import ProcessManager
 from .config import *
 from .options import *
 from .utils import print_cli_progress_bar
+from .color_silkscreen.errors import ColorSilkError
+from .color_silkscreen.report import Report, setup_logging
 
 
 class ProcessThread(Thread):
     def __init__(self, wx, options, cli = None, openBrowser = True, nonInteractive = False):
         Thread.__init__(self)
+        self.error = None
+        self.archive_path = None
 
         # prevent use of cli and graphical mode at the same time
         if (wx is None and cli is None) or (wx is not None and cli is not None):
             logging.error("Specify either graphical or cli use!")
+            self.error = "Specify either graphical or cli use!"
             return
-        
+
         if cli is not None:
             try:
                 self.board = pcbnew.LoadBoard(cli)
             except Exception as e:
                 logging.error("Fabrication Toolkit - Error" + str(e))
+                self.error = str(e)
                 return
         else:
             self.board = None
@@ -76,6 +82,8 @@ class ProcessThread(Thread):
         _, temp_file = tempfile.mkstemp()
         project_directory = os.path.dirname(self.process_manager.board.GetFileName())
 
+        color_report = self.start_color_report(project_directory)
+
         try:
             # Verify all zones are up-to-date
             self.progress(10)
@@ -90,6 +98,11 @@ class ProcessThread(Thread):
             # generate drill file
             self.progress(30)
             self.process_manager.generate_drills(temp_dir_gerber)
+
+            # colour silkscreen: EasyEDA-style Gerbers + encrypted colour files
+            if color_report is not None:
+                self.progress(35)
+                self.generate_color_silkscreen(temp_dir_gerber, color_report)
 
             # generate netlist
             self.progress(40)
@@ -114,10 +127,15 @@ class ProcessThread(Thread):
             shutil.rmtree(temp_dir_gerber)
             temp_file = os.path.join(temp_dir, os.path.basename(temp_file))
         except Exception as e:
+            self.error = str(e)
+            message = e.user_text() if isinstance(e, ColorSilkError) else str(e)
+            if color_report is not None:
+                color_report.error(e if isinstance(e, ColorSilkError) else ColorSilkError("E_INTERNAL", str(e)))
+                self.finish_color_report(color_report)
             if self.wx is None:
                 logging.error("Fabrication Toolkit - Error" + str(e))
             else:
-                wx.MessageBox(str(e), "Fabrication Toolkit - Error", wx.OK | wx.ICON_ERROR)
+                wx.MessageBox(message, "Fabrication Toolkit - Error", wx.OK | wx.ICON_ERROR)
             self.progress(-1)
             return
 
@@ -186,10 +204,75 @@ class ProcessThread(Thread):
             if self.openBrowser:
                 webbrowser.open("file://%s" % (temp_dir))
 
-        if self.wx is None: 
+        self.archive_path = os.path.join(output_path, gerberArchiveName)
+        if color_report is not None:
+            self.record_archive(color_report)
+            self.finish_color_report(color_report)
+            if self.wx is not None and color_report.data["warnings"]:
+                wx.MessageBox("\n".join("{}: {}".format(w["code"], w["message"]) for w in color_report.data["warnings"]),
+                              "Fabrication Toolkit - Sérigraphie couleur", wx.OK | wx.ICON_WARNING)
+
+        if self.wx is None:
             self.progress(100)
         else:
             self.progress(-1)
+
+    """ Colour silkscreen """
+
+    def color_requested(self):
+        return bool(self.options.get(TOP_IMAGE_OPT) or self.options.get(BOTTOM_IMAGE_OPT))
+
+    def start_color_report(self, project_directory):
+        if not self.color_requested():
+            return None
+        out_dir = os.path.join(project_directory, outputFolder)
+        self.color_report_path = self.options.get(COLOR_REPORT_OPT) or os.path.join(out_dir, 'color_silkscreen_report.json')
+        self.color_log_path = self.options.get(COLOR_LOG_OPT) or os.path.join(out_dir, 'color_silkscreen.log')
+        setup_logging(self.color_log_path, console=self.wx is None)
+        return Report(input_board=self.process_manager.board.GetFileName(), kicad_version=pcbnew.Version())
+
+    def finish_color_report(self, report):
+        try:
+            report.write(self.color_report_path)
+        except OSError as e:
+            logging.error("Fabrication Toolkit - cannot write colour report: " + str(e))
+
+    def board_edge_bounds_mm(self):
+        '''Edge.Cuts bounding box expressed in Gerber coordinates (aux origin, Y up).'''
+        board = self.process_manager.board
+        bbox = board.GetBoardEdgesBoundingBox()
+        if bbox.GetWidth() <= 0 or bbox.GetHeight() <= 0:
+            return None
+        aux = board.GetDesignSettings().GetAuxOrigin()
+        to_mm = pcbnew.ToMM
+        return (to_mm(bbox.GetLeft() - aux.x), -to_mm(bbox.GetBottom() - aux.y),
+                to_mm(bbox.GetRight() - aux.x), -to_mm(bbox.GetTop() - aux.y))
+
+    def generate_color_silkscreen(self, gerber_dir, report):
+        from .color_silkscreen.generate import generate_color_silkscreen, Options
+
+        expected = None
+        if not self.options.get(ALTERNATIVE_EDGE_CUT_OPT) and not self.options.get(EXTEND_EDGE_CUT_OPT):
+            expected = self.board_edge_bounds_mm()
+        report.step("gerbers", files=sorted(os.listdir(gerber_dir)))
+        generate_color_silkscreen(
+            gerber_dir,
+            top_image=self.options.get(TOP_IMAGE_OPT) or None,
+            bottom_image=self.options.get(BOTTOM_IMAGE_OPT) or None,
+            report=report,
+            options=Options(fit=self.options.get(COLOR_FIT_OPT) or "stretch",
+                            profile=self.options.get(COLOR_PROFILE_OPT) or "default",
+                            debug_svg_dir=self.options.get(COLOR_DEBUG_SVG_OPT) or None,
+                            expected_bounds_mm=expected))
+
+    def record_archive(self, report):
+        import zipfile
+        try:
+            with zipfile.ZipFile(self.archive_path) as archive:
+                names = archive.namelist()
+            report.step("zip", path=self.archive_path, files=names)
+        except Exception as e:
+            report.error(ColorSilkError("E_ZIP", "Archive {} illisible : {}".format(self.archive_path, e)))
 
     def progress(self, percent):
         if self.wx is None:

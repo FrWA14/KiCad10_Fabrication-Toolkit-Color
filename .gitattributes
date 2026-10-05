@@ -1,0 +1,2 @@
+tests/fixtures/** -text
+plugins/color_silkscreen/assets/** -text

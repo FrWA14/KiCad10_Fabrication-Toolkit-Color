@@ -1,0 +1,16 @@
+diff --git a/src/colorful/encrypt.rs b/src/colorful/encrypt.rs
+index b071440..09b0c2b 100644
+--- a/src/colorful/encrypt.rs
++++ b/src/colorful/encrypt.rs
+@@ -58,6 +58,11 @@ pub(crate) fn encrypt_and_write(
+         .encrypt(nonce, svg.as_bytes())
+         .map_err(|e| anyhow!("Encrypt silkscreen SVG: {:?}", e))?;
+ 
++    if std::env::var_os("TRANSJLC_DEBUG_SVG").is_some() {
++        let mut dbg = output.as_os_str().to_owned();
++        dbg.push(".svg");
++        std::fs::write(std::path::PathBuf::from(dbg), svg.as_bytes()).ok();
++    }
+     let mut file = File::create(output).with_context(|| format!("Create {}", output.display()))?;
+     file.write_all(&key_material.enc_key)
+         .with_context(|| format!("Write AES key for {}", output.display()))?;
