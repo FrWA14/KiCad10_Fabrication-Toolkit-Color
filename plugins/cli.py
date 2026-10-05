@@ -41,6 +41,8 @@ if __name__ == '__main__':
     parser.add_argument("--report",             type=str, help="Write the colour silkscreen report (JSON) here", metavar="PATH")
     parser.add_argument("--log",                type=str, help="Colour silkscreen log file", metavar="PATH")
     parser.add_argument("--placement",          type=str, help="Placement JSON from the editor (color_placement.json): position/size per face", metavar="FILE")
+    parser.add_argument("--edaVersion",         type=str, help="eda-version written in the colour SVGs (default 2.4(2026-05-08))", metavar="V")
+    parser.add_argument("--easyedaVersion",     type=str, help="EasyEDA Pro version in the Gerber headers (default 3.2.148)", metavar="V")
     parser.add_argument("--debugSvg",           type=str, help="Also write the plaintext colour SVGs to this folder", metavar="DIR")
     args = parser.parse_args()
 
@@ -68,6 +70,8 @@ if __name__ == '__main__':
     options[COLOR_REPORT_OPT] = os.path.abspath(args.report) if args.report else None
     options[COLOR_LOG_OPT] = os.path.abspath(args.log) if args.log else None
     options[COLOR_DEBUG_SVG_OPT] = os.path.abspath(args.debugSvg) if args.debugSvg else None
+    options[COLOR_EDA_VERSION_OPT] = args.edaVersion
+    options[COLOR_EASYEDA_VERSION_OPT] = args.easyedaVersion
     if args.placement:
         from .color_silkscreen.placement import load_placements
         placements = load_placements(args.placement)

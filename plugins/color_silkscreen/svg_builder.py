@@ -8,7 +8,11 @@ from .numfmt import f
 
 UNIT = 0.254
 SVG_HEADER = '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'
-EDA_VERSION = "1.6(2025-08-27)"
+# Colour-file format version. JLCPCB rejects old ones ("multi-color silkscreen
+# file is outdated, update to EasyEDA V3.2.135"): 1.6(2025-08-27) is what
+# TransJLC 0.4.0 writes; 2.4(2026-05-08) is what Overprint writes (recent export).
+EDA_VERSION_TRANSJLC = "1.6(2025-08-27)"
+EDA_VERSION = "2.4(2026-05-08)"
 CLIP_MARGIN = 0.8374  # shrink, 10-mil units (same value as the EasyEDA sample)
 EXPAND = 0.5          # expand, 10-mil units
 
@@ -74,7 +78,7 @@ def _frame(bounds):
     return min_x, max_x, min_y, max_y, mil10(bounds.width), mil10(bounds.height)
 
 
-def _silkscreen_svg(bounds, image, mask_paths, bottom, inset_mm):
+def _silkscreen_svg(bounds, image, mask_paths, bottom, inset_mm, eda_version=EDA_VERSION):
     min_x, max_x, min_y, max_y, w, h = _frame(bounds)
     marks = " ".join("{} {}".format(f(mil10(x)), f(mil10(y))) for x, y in mark_points(bounds, inset_mm))
 
@@ -86,7 +90,7 @@ def _silkscreen_svg(bounds, image, mask_paths, bottom, inset_mm):
     xw.attr("boardBox", box)
     xw.attr("viewBox", box)
     xw.attr("version", "1.1")
-    xw.attr("eda-version", EDA_VERSION)
+    xw.attr("eda-version", eda_version)
     xw.attr("mark-points", marks)
     xw.attr("xmlns:inkscape", "http://www.inkscape.org/namespaces/inkscape")
     xw.attr("xmlns:sodipodi", "http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd")
@@ -152,13 +156,13 @@ def _silkscreen_svg(bounds, image, mask_paths, bottom, inset_mm):
     return xw.document()
 
 
-def build_top_svg(bounds, image, mask_paths, inset_mm=MARK_INSET_MM):
-    return _silkscreen_svg(bounds, image, mask_paths, False, inset_mm)
+def build_top_svg(bounds, image, mask_paths, inset_mm=MARK_INSET_MM, eda_version=EDA_VERSION):
+    return _silkscreen_svg(bounds, image, mask_paths, False, inset_mm, eda_version)
 
 
-def build_bottom_svg(bounds, image, mask_paths, inset_mm=MARK_INSET_MM):
+def build_bottom_svg(bounds, image, mask_paths, inset_mm=MARK_INSET_MM, eda_version=EDA_VERSION):
     """Image is given as seen when looking at the bottom face; the group mirrors it."""
-    return _silkscreen_svg(bounds, image, mask_paths, True, inset_mm)
+    return _silkscreen_svg(bounds, image, mask_paths, True, inset_mm, eda_version)
 
 
 def build_board_outline_svg(bounds, profile="default"):

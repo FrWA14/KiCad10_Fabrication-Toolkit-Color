@@ -81,10 +81,16 @@ def normalize_aperture_decimals(content):
                   lambda m: re.sub(r"([,X])\.(\d)", r"\g<1>0.\2", m.group(0)), content)
 
 
-def add_gerber_header(content, now=None):
+# Generator version written in every Gerber header. JLCPCB may compare it with
+# its minimum (EasyEDA V3.2.135 in October 2026). TransJLC/Overprint: 2.2.42.2.
+EASYEDA_VERSION_TRANSJLC = "2.2.42.2"
+EASYEDA_VERSION = "3.2.148"
+
+
+def add_gerber_header(content, now=None, app_version=EASYEDA_VERSION):
     now = now or datetime.now()
-    header = "G04 EasyEDA Pro v2.2.42.2, {}*\nG04 Gerber Generator version 0.3*\n".format(
-        now.strftime("%Y-%m-%d %H:%M:%S"))
+    header = "G04 EasyEDA Pro v{}, {}*\nG04 Gerber Generator version 0.3*\n".format(
+        app_version, now.strftime("%Y-%m-%d %H:%M:%S"))
     return header + content.replace("\r\n", "\n")
 
 
@@ -173,7 +179,7 @@ def normalize_excellon(content):
 
 # --------------------------------------------------------------------------- directory conversion
 
-def convert_directory(gerber_dir, log=None, now=None, rng=random):
+def convert_directory(gerber_dir, log=None, now=None, rng=random, app_version=EASYEDA_VERSION):
     """Rewrite `gerber_dir` in place into the EasyEDA layout.
 
     Returns {layer_key: absolute path}. Unmatched files (drill maps, job files)
@@ -217,7 +223,7 @@ def convert_directory(gerber_dir, log=None, now=None, rng=random):
                 text = normalize_excellon(text)
             else:
                 text = normalize_aperture_decimals(strip_deprecated_attribute_blocks(split_combined_fs_mo(text)))
-                text = add_gerber_header(text, now)
+                text = add_gerber_header(text, now, app_version)
                 if needs_g54:
                     text = add_missing_g54_prefix(text)
                 text = add_hash_aperture(text, rng)

@@ -85,11 +85,24 @@ Le dossier `svg/` contient les SVG en clair (option `--debugSvg`). On peut les o
 7. **KiCad 10.0.4 : champ masque non déterministe dans l'IPC-D-356.** Sur les enregistrements VIA de `netlist.ipc`, ce champ change à chaque export, avec FT d'origine aussi. La comparaison de non-régression l'ignore.
 8. **Fichiers abandonnés** en mode couleur : les cartes de perçage `*-drl_map.gbr` (comme TransJLC). Sans image, rien ne change.
 
+9. **Retour JLCPCB du 6 octobre 2026 (ZIP RP2350, profil default 0.2.2).** Fichiers couleur **reconnus** : l'option
+   *EasyEDA multi-color silkscreen* apparaît, mais grisée, avec le message : *« The multi-color silkscreen file is
+   outdated. Please update to EasyEDA version V3.2.135 or later and re-export the Gerber file for the multi-color
+   silkscreen. »* Le chiffrement et la structure sont donc acceptés ; un contrôle de version bloque. Deux marqueurs
+   possibles, maintenant réglables (`--easyedaVersion`, `--edaVersion`) : l'en-tête Gerber `EasyEDA Pro v2.2.42.2` et
+   l'attribut SVG `eda-version="1.6(2025-08-27)"`. Depuis la 0.2.3, valeurs par défaut `3.2.148` et `2.4(2026-05-08)`
+   (Overprint). Variantes à tester : `out/jlc_tests/RP2350_test_{A,B,C}.zip` (A : Gerber 2.2.42.2 + SVG 2.4 ;
+   B : Gerber 3.2.148 + SVG 1.6 ; C : Gerber 3.2.148 + SVG 2.4).
+
 ## Validation manuelle chez JLCPCB (à faire par l'utilisateur)
 
 Procédure : README, section « Valider chez JLCPCB ». Reporter ici les messages exacts.
 
 | Date | Carte / ZIP | Profil | Options JLCPCB | Gerber Viewer (couleur visible ?) | Message / erreur exacte | Commande / rendu physique |
 |---|---|---|---|---|---|---|
+| 2026-10-06 | RP2350 (`RP2350_couleur_dos.zip`) | default 0.2.2 | blanc, ENIG | option couleur grisée | « multi-color silkscreen file is outdated… EasyEDA V3.2.135 or later » | — |
+| | RP2350 `RP2350_test_A.zip` | Gerber 2.2.42.2 / SVG 2.4 | idem | | | |
+| | RP2350 `RP2350_test_B.zip` | Gerber 3.2.148 / SVG 1.6 | idem | | | |
+| | RP2350 `RP2350_test_C.zip` | Gerber 3.2.148 / SVG 2.4 | idem | | | |
 | | T2 (`out/matrix/T2-both/production/T2-both.zip`) | default | blanc, ENIG, 1 oz, EasyEDA multi-color silkscreen | | | |
 | | T2 (`out/matrix/T2-transjlc/production/T2-transjlc.zip`) | transjlc | idem | | | |

@@ -167,6 +167,8 @@ class KiCadToJLCForm(wx.Frame):
         options[BOTTOM_IMAGE_OPT] = self.mBottomImagePicker.GetPath().strip()
         options[COLOR_FIT_OPT] = "contain" if self.mColorFitCheckbox.GetValue() else "stretch"
         options[COLOR_PROFILE_OPT] = self.userOptions.get(COLOR_PROFILE_OPT) or "default"  # set by hand in the options file
+        for key in ("COLOR_EDA_VERSION", "COLOR_EASYEDA_VERSION"):  # optional overrides, options file only
+            options[key] = self.userOptions.get(key) or None
         options[TOP_PLACEMENT_OPT] = self.placementFor("top", options[TOP_IMAGE_OPT])
         options[BOTTOM_PLACEMENT_OPT] = self.placementFor("bottom", options[BOTTOM_IMAGE_OPT])
 

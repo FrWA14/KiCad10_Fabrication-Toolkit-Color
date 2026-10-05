@@ -27,7 +27,7 @@ python tools/build_pcm.py
 ```
 
 Puis dans KiCad 10 : *Gestionnaire de plugins et de contenus → Installer depuis un fichier…* →
-`dist/fabrication-toolkit-color-0.2.2.zip`.
+`dist/fabrication-toolkit-color-0.2.3.zip`.
 
 **Copie de développement** : copier (ou lier) le dossier `plugins/` dans
 `%USERPROFILE%\Documents\KiCad\10.0\scripting\plugins\fabrication_toolkit_color\`, puis *Outils → Plugins externes →

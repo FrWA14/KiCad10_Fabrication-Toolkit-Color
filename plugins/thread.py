@@ -266,6 +266,8 @@ class ProcessThread(Thread):
             options=Options(fit=self.options.get(COLOR_FIT_OPT) or "stretch",
                             profile=self.options.get(COLOR_PROFILE_OPT) or "default",
                             debug_svg_dir=self.options.get(COLOR_DEBUG_SVG_OPT) or None,
+                            eda_version=self.options.get(COLOR_EDA_VERSION_OPT) or None,
+                            easyeda_version=self.options.get(COLOR_EASYEDA_VERSION_OPT) or None,
                             expected_bounds_mm=expected))
 
     def compose_placed_images(self, report):

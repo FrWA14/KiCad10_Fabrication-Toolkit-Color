@@ -19,5 +19,7 @@ COLOR_PROFILE_OPT = "COLOR_PROFILE"    # 'default' | 'transjlc'
 COLOR_REPORT_OPT = "COLOR_REPORT"      # report.json path (CLI)
 COLOR_LOG_OPT = "COLOR_LOG"            # log path (CLI)
 COLOR_DEBUG_SVG_OPT = "COLOR_DEBUG_SVG"  # dump plaintext SVGs to this folder
+COLOR_EDA_VERSION_OPT = "COLOR_EDA_VERSION"          # SVG eda-version override, e.g. "2.4(2026-05-08)"
+COLOR_EASYEDA_VERSION_OPT = "COLOR_EASYEDA_VERSION"  # Gerber header override, e.g. "3.2.148"
 TOP_PLACEMENT_OPT = "TOP_COLOR_PLACEMENT"        # {"image", "cx", "cy", "w", "h", "rot"} in mm (placement editor)
 BOTTOM_PLACEMENT_OPT = "BOTTOM_COLOR_PLACEMENT"
