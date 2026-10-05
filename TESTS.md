@@ -93,6 +93,9 @@ Le dossier `svg/` contient les SVG en clair (option `--debugSvg`). On peut les o
    l'attribut SVG `eda-version="1.6(2025-08-27)"`. Depuis la 0.2.3, valeurs par défaut `3.2.148` et `2.4(2026-05-08)`
    (Overprint). Variantes à tester : `out/jlc_tests/RP2350_test_{A,B,C}.zip` (A : Gerber 2.2.42.2 + SVG 2.4 ;
    B : Gerber 3.2.148 + SVG 1.6 ; C : Gerber 3.2.148 + SVG 2.4).
+   **Résultat : C est accepté** (option sélectionnable, aperçu couleur correct dans le Gerber Viewer). A et B
+   n'ont pas été testés : on ne sait pas lequel des deux marqueurs est contrôlé, mais les valeurs par défaut de
+   la 0.2.3 fonctionnent. Le profil `transjlc` (anciennes valeurs) est refusé par JLCPCB à cette date.
 
 ## Validation manuelle chez JLCPCB (à faire par l'utilisateur)
 
@@ -103,6 +106,6 @@ Procédure : README, section « Valider chez JLCPCB ». Reporter ici les message
 | 2026-10-06 | RP2350 (`RP2350_couleur_dos.zip`) | default 0.2.2 | blanc, ENIG | option couleur grisée | « multi-color silkscreen file is outdated… EasyEDA V3.2.135 or later » | — |
 | | RP2350 `RP2350_test_A.zip` | Gerber 2.2.42.2 / SVG 2.4 | idem | | | |
 | | RP2350 `RP2350_test_B.zip` | Gerber 3.2.148 / SVG 1.6 | idem | | | |
-| | RP2350 `RP2350_test_C.zip` | Gerber 3.2.148 / SVG 2.4 | idem | | | |
+| 2026-10-06 | RP2350 `RP2350_test_C.zip` | Gerber 3.2.148 / SVG 2.4 (= défaut 0.2.3) | blanc, ENIG | **option couleur sélectionnable ; Gerber Viewer « Bottom » : image visible, bien placée, découpée au contour, ouvertures alignées** | aucun | commande non passée |
 | | T2 (`out/matrix/T2-both/production/T2-both.zip`) | default | blanc, ENIG, 1 oz, EasyEDA multi-color silkscreen | | | |
 | | T2 (`out/matrix/T2-transjlc/production/T2-transjlc.zip`) | transjlc | idem | | | |

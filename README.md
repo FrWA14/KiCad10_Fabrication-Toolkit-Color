@@ -14,8 +14,13 @@ changent pas.
   JLCPCB indique n'accepter que les exports d'EasyEDA Pro. Le format peut changer sans préavis.
 - Pour être reconnu comme « couleur », le ZIP imite un export EasyEDA Pro : Gerbers renommés, en-tête
   `G04 EasyEDA Pro …` et ouverture « empreinte ». La géométrie des Gerbers n'est pas modifiée.
-- **Aucune commande réelle n'a encore validé cette sortie.** Vérifier toujours l'aperçu dans le *Gerber Viewer* de
-  JLCPCB avant de payer (voir « Valider chez JLCPCB »).
+- **Validé à l'upload le 6 octobre 2026** (v0.2.3) : JLCPCB accepte l'option *EasyEDA multi-color silkscreen* et
+  son *Gerber Viewer* affiche l'image au bon endroit. **Aucune carte n'a encore été fabriquée** : le rendu physique
+  reste à confirmer. Vérifier toujours l'aperçu avant de payer (voir « Valider chez JLCPCB »).
+- JLCPCB refuse les fichiers marqués avec une ancienne version d'EasyEDA (« multi-color silkscreen file is outdated…
+  V3.2.135 or later »). Les marqueurs par défaut (`3.2.148`, `2.4(2026-05-08)`) passent ; s'ils sont refusés un jour,
+  les changer avec `--easyedaVersion` / `--edaVersion` (ou `COLOR_EASYEDA_VERSION` / `COLOR_EDA_VERSION` dans
+  `fabrication-toolkit-options.json`).
 - Projet non affilié à JLCPCB ni à EasyEDA.
 
 ## Installation
