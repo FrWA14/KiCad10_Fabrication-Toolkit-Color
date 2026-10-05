@@ -1,0 +1,9 @@
+ref/
+out/
+__pycache__/
+*.pyc
+tests/boards/
+tests/img/
+.pytest_cache/
+*.log
+production/
