@@ -32,7 +32,7 @@ python tools/build_pcm.py
 ```
 
 Puis dans KiCad 10 : *Gestionnaire de plugins et de contenus → Installer depuis un fichier…* →
-`dist/fabrication-toolkit-color-0.2.3.zip`.
+`dist/fabrication-toolkit-color-0.2.4.zip`.
 
 **Copie de développement** : copier (ou lier) le dossier `plugins/` dans
 `%USERPROFILE%\Documents\KiCad\10.0\scripting\plugins\fabrication_toolkit_color\`, puis *Outils → Plugins externes →
@@ -70,6 +70,11 @@ déposée), composants de la face en gris, contour Edge.Cuts en vert.
   **Rotation 90°**, **Retirer**. Champs Centre X/Y, Largeur, Hauteur en mm, et résolution effective (DPI, en rouge
   sous 150).
 - **Aperçu découpé au contour** : montre déjà ce qui restera.
+- **Imprimer la sérigraphie de cette face dans l'image couleur** + **Couleur** : avec le procédé couleur (PCB blanc,
+  ENIG), la sérigraphie blanche classique n'apparaît pas. Cette option dessine F.Silkscreen (vue de dessus) ou
+  B.Silkscreen (vue de dessous) **dans l'image**, au-dessus de la photo, dans la couleur choisie. Elle fonctionne aussi
+  **sans image** sur la face : seule la sérigraphie est alors imprimée en couleur. Réglage par face, mémorisé avec la
+  carte.
 - **Sérigraphie : F.Silkscreen / B.Silkscreen** : la sérigraphie de la face affichée en noir sur le blanc (textes, logos, contours), au-dessus de l'image ; celle de l'autre face en gris léger, en transparence. Décocher pour voir l'image seule.
 
 À la génération, chaque image placée est rendue à 1200 DPI sur toute la carte, puis **tout ce qui sort du contour
@@ -90,6 +95,7 @@ Ces fichiers restent **hors** du ZIP envoyé à JLCPCB, pour ne pas perturber le
 | `--colorFit stretch\|contain` | déformer l'image au format de la carte (défaut) ou ajouter des marges |
 | `--colorProfile default\|transjlc` | `transjlc` reproduit la sortie de TransJLC 0.4.0, bugs compris (voir TESTS.md) |
 | `--report PATH`, `--log PATH` | rapport JSON et log (défaut : dans `production/`) |
+| `--topSilkColor`, `--bottomSilkColor` | `#RRGGBB` : imprime F/B.Silkscreen dans l'image couleur de cette face (même sans image) |
 | `--placement FILE` | placements de l'éditeur (`color_placement.json`) : position, taille et rotation par face |
 | `--debugSvg DIR` | écrit aussi les SVG **en clair** (avant chiffrement) pour les inspecter dans un navigateur |
 

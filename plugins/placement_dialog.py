@@ -28,6 +28,7 @@ class PlacementCanvas(wx.Panel):
         self.view = view
         self.side = "top"
         self.placements = placements          # side -> placement dict or None
+        self.silk_print = {"top": None, "bottom": None}  # side -> {"enabled", "color"} or None
         self.on_change = on_change
         self.opacity = 0.85
         self.clip_preview = True
@@ -159,9 +160,13 @@ class PlacementCanvas(wx.Panel):
         # silkscreen: this face in black on the white mask (above the colour image),
         # the other face as a faint grey "see-through" like KiCad's back layers
         other = "bottom" if self.side == "top" else "top"
-        for layer_side, colour in ((other, wx.Colour(120, 120, 130, 70)), (self.side, wx.Colour(20, 20, 20))):
+        printed = self.silk_print.get(self.side)
+        own = wx.Colour(printed["color"]) if printed else wx.Colour(20, 20, 20)
+        for layer_side, colour in ((other, wx.Colour(120, 120, 130, 70)), (self.side, own)):
             chains = self.view.get("silk", {}).get(layer_side, [])
-            if not self.show_silk[layer_side] or not chains:
+            # printed silkscreen is part of the colour image: always shown, in its colour
+            visible = self.show_silk[layer_side] or (layer_side == self.side and printed)
+            if not visible or not chains:
                 continue
             silk = gc.CreatePath()
             for chain in chains:
@@ -300,7 +305,7 @@ class PlacementCanvas(wx.Panel):
 
 
 class PlacementDialog(wx.Dialog):
-    def __init__(self, parent, view, placements):
+    def __init__(self, parent, view, placements, silk=None):
         super().__init__(parent, title="Sérigraphie couleur — placement des images (v{})".format(VERSION),
                          style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
         self.view = view
@@ -308,6 +313,8 @@ class PlacementDialog(wx.Dialog):
 
         self.side_box = wx.RadioBox(self, choices=list(SIDE_LABELS), style=wx.RA_SPECIFY_COLS)
         self.canvas = PlacementCanvas(self, view, self.placements, self.sync_fields)
+        self.silk_print = {side: (dict(silk[side]) if silk and silk.get(side) else {"enabled": False, "color": "#000000"})
+                           for side in SIDES}
 
         buttons = wx.BoxSizer(wx.HORIZONTAL)
         self.btn = {}
@@ -341,6 +348,18 @@ class PlacementDialog(wx.Dialog):
         self.chk_clip.SetValue(True)
         self.chk_fp = wx.CheckBox(self, label="Afficher les composants")
         self.chk_fp.SetValue(True)
+        printing = wx.BoxSizer(wx.HORIZONTAL)
+        self.chk_print_silk = wx.CheckBox(self, label="Imprimer la sérigraphie de cette face dans l'image couleur")
+        self.chk_print_silk.SetToolTip("En sérigraphie couleur (PCB blanc, ENIG), la sérigraphie blanche classique n'est pas "
+                                       "imprimée : cette option la dessine dans l'image, dans la couleur choisie.")
+        self.silk_colour = wx.ColourPickerCtrl(self, colour=wx.Colour(0, 0, 0))
+        self.silk_colour.SetToolTip("Couleur de la sérigraphie imprimée")
+        printing.Add(self.chk_print_silk, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
+        printing.Add(wx.StaticText(self, label="Couleur :"), 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
+        printing.Add(self.silk_colour, 0, wx.ALIGN_CENTER_VERTICAL)
+        self.chk_print_silk.Bind(wx.EVT_CHECKBOX, self.on_silk_print)
+        self.silk_colour.Bind(wx.EVT_COLOURPICKER_CHANGED, self.on_silk_print)
+
         layers = wx.BoxSizer(wx.HORIZONTAL)
         layers.Add(wx.StaticText(self, label="Sérigraphie :"), 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
         self.chk_silk = {}
@@ -382,17 +401,41 @@ class PlacementDialog(wx.Dialog):
         s.Add(values, 0, wx.LEFT | wx.RIGHT, 6)
         s.Add(opts, 0, wx.ALL, 6)
         s.Add(layers, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
+        s.Add(printing, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
         s.Add(hint, 0, wx.LEFT | wx.RIGHT, 6)
         s.Add(bottom, 0, wx.ALL | wx.ALIGN_RIGHT, 6)
         self.SetSizerAndFit(s)
         self.SetSize(wx.Size(820, 860))
         self.side_box.Bind(wx.EVT_RADIOBOX, self.on_side)
-        self.sync_fields()
+        self.set_side("top")
 
     # ------------------------------------------------------------------ actions
+    def on_silk_print(self, _=None):
+        state = self.silk_print[self.canvas.side]
+        state["enabled"] = self.chk_print_silk.GetValue()
+        state["color"] = self.silk_colour.GetColour().GetAsString(wx.C2S_HTML_SYNTAX)
+        self.silk_colour.Enable(state["enabled"])
+        self.canvas.silk_print = {s: (v if v["enabled"] else None) for s, v in self.silk_print.items()}
+        self.canvas.Refresh()
+
+    def set_silk_print(self, side, enabled, color="#000000"):
+        self.silk_print[side] = {"enabled": bool(enabled), "color": color}
+        if side == self.canvas.side:
+            self.chk_print_silk.SetValue(bool(enabled))
+            self.silk_colour.SetColour(wx.Colour(color))
+        self.canvas.silk_print = {s: (v if v["enabled"] else None) for s, v in self.silk_print.items()}
+        self.canvas.Refresh()
+
     def set_side(self, side):
         self.side_box.SetSelection(SIDES.index(side))
         self.canvas.side = side
+        state = self.silk_print[side]
+        self.chk_print_silk.SetLabel("Imprimer la sérigraphie {} dans l'image couleur".format(
+            "F.Silkscreen" if side == "top" else "B.Silkscreen"))
+        self.chk_print_silk.SetValue(state["enabled"])
+        self.silk_colour.SetColour(wx.Colour(state["color"]))
+        self.silk_colour.Enable(state["enabled"])
+        self.canvas.silk_print = {s: (v if v["enabled"] else None) for s, v in self.silk_print.items()}
         self.canvas.Refresh()
         self.sync_fields()
 
@@ -474,6 +517,9 @@ class PlacementDialog(wx.Dialog):
             self.dpi_label.SetForegroundColour(wx.Colour(200, 40, 40) if dpi < 150 else wx.Colour(30, 120, 40))
         else:
             self.dpi_label.SetLabel("")
+
+    def result_silk(self):
+        return {s: (pl.normalize_silk(v) if v["enabled"] else None) for s, v in self.silk_print.items()}
 
     def result(self):
         return {s: (pl.normalize(self.placements[s]) if self.placements[s] else None) for s in SIDES}

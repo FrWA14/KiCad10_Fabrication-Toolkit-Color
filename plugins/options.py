@@ -23,3 +23,5 @@ COLOR_EDA_VERSION_OPT = "COLOR_EDA_VERSION"          # SVG eda-version override,
 COLOR_EASYEDA_VERSION_OPT = "COLOR_EASYEDA_VERSION"  # Gerber header override, e.g. "3.2.148"
 TOP_PLACEMENT_OPT = "TOP_COLOR_PLACEMENT"        # {"image", "cx", "cy", "w", "h", "rot"} in mm (placement editor)
 BOTTOM_PLACEMENT_OPT = "BOTTOM_COLOR_PLACEMENT"
+TOP_SILK_OPT = "TOP_SILK_AS_IMAGE"              # {"enabled": bool, "color": "#RRGGBB"}: F.Silkscreen printed in the colour image
+BOTTOM_SILK_OPT = "BOTTOM_SILK_AS_IMAGE"

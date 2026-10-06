@@ -6,7 +6,7 @@ import pcbnew  # type: ignore
 from .thread import ProcessThread
 from .events import StatusEvent
 from .options import AUTO_FILL_OPT, AUTO_TRANSLATE_OPT, EXCLUDE_DNP_OPT, EXTEND_EDGE_CUT_OPT, ALTERNATIVE_EDGE_CUT_OPT, EXTRA_LAYERS, ALL_ACTIVE_LAYERS_OPT, ARCHIVE_NAME, OPEN_BROWSER_OPT, BACKUP_OPT
-from .options import TOP_IMAGE_OPT, BOTTOM_IMAGE_OPT, COLOR_FIT_OPT, COLOR_PROFILE_OPT, TOP_PLACEMENT_OPT, BOTTOM_PLACEMENT_OPT
+from .options import TOP_IMAGE_OPT, BOTTOM_IMAGE_OPT, COLOR_FIT_OPT, COLOR_PROFILE_OPT, TOP_PLACEMENT_OPT, BOTTOM_PLACEMENT_OPT, TOP_SILK_OPT, BOTTOM_SILK_OPT
 from .version import VERSION
 from .utils import load_user_options, save_user_options, get_layer_names
 
@@ -47,7 +47,10 @@ class KiCadToJLCForm(wx.Frame):
             COLOR_PROFILE_OPT: "default",
             TOP_PLACEMENT_OPT: None,
             BOTTOM_PLACEMENT_OPT: None,
+            TOP_SILK_OPT: None,
+            BOTTOM_SILK_OPT: None,
         })
+        self.silk = {"top": userOptions[TOP_SILK_OPT], "bottom": userOptions[BOTTOM_SILK_OPT]}
         self.placements = {"top": userOptions[TOP_PLACEMENT_OPT], "bottom": userOptions[BOTTOM_PLACEMENT_OPT]}
         self.userOptions = userOptions
 
@@ -171,6 +174,8 @@ class KiCadToJLCForm(wx.Frame):
             options[key] = self.userOptions.get(key) or None
         options[TOP_PLACEMENT_OPT] = self.placementFor("top", options[TOP_IMAGE_OPT])
         options[BOTTOM_PLACEMENT_OPT] = self.placementFor("bottom", options[BOTTOM_IMAGE_OPT])
+        options[TOP_SILK_OPT] = self.silk.get("top")
+        options[BOTTOM_SILK_OPT] = self.silk.get("bottom")
 
         save_user_options(options)
 
@@ -209,8 +214,13 @@ class KiCadToJLCForm(wx.Frame):
         parts = []
         for side, picker, name in (("top", self.mTopImagePicker, "dessus"), ("bottom", self.mBottomImagePicker, "dessous")):
             p = self.placementFor(side, picker.GetPath().strip())
-            if p:
-                parts.append("{} : {:.1f} x {:.1f} mm".format(name, p["w"], p["h"]))
+            silk = (self.silk or {}).get(side)
+            if p or silk:
+                text = "{} : ".format(name)
+                text += "{:.1f} x {:.1f} mm".format(p["w"], p["h"]) if p else "sans image"
+                if silk:
+                    text += " + sérigraphie {}".format(silk["color"])
+                parts.append(text)
         self.mPlacementLabel.SetLabel("Placement : " + (" ; ".join(parts) if parts else
                                       "aucun (l'image couvre tout le contour)"))
 
@@ -227,7 +237,7 @@ class KiCadToJLCForm(wx.Frame):
         for side, picker in (("top", self.mTopImagePicker), ("bottom", self.mBottomImagePicker)):
             image = picker.GetPath().strip()
             current[side] = self.placementFor(side, image)
-        dlg = PlacementDialog(self, view, current)
+        dlg = PlacementDialog(self, view, current, self.silk)
         for side, picker in (("top", self.mTopImagePicker), ("bottom", self.mBottomImagePicker)):
             image = picker.GetPath().strip()
             if image and not current[side] and os.path.isfile(image):
@@ -235,6 +245,7 @@ class KiCadToJLCForm(wx.Frame):
         dlg.set_side("top")
         if dlg.ShowModal() == wx.ID_OK:
             self.placements = dlg.result()
+            self.silk = dlg.result_silk()
             for side, picker in (("top", self.mTopImagePicker), ("bottom", self.mBottomImagePicker)):
                 picker.SetPath(self.placements[side]["image"] if self.placements[side] else "")
             self.updatePlacementLabel()

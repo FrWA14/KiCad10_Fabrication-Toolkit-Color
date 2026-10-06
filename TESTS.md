@@ -57,6 +57,7 @@ Le dossier `svg/` contient les SVG en clair (option `--debugSvg`). On peut les o
 | T6-no-outline | T6 | logo.png | — | — | error / E_OUTLINE_MISSING | error / E_OUTLINE_MISSING | — | ✅ |
 | T7-huge | T7 | huge.png | — | — | ok | ok | W_IMAGE_RESAMPLED | ✅ |
 | T3-placement | T3 | logo.png (placé) | photo.jpg (placé, 90°) | --placement AUTO | ok | ok | — | ✅ |
+| T2-silk-only | T2 | — | — | --topSilkColor #C0392B | ok | ok | — | ✅ |
 | T7-contain | T7 | logo.png | — | --colorFit contain | ok | ok | W_IMAGE_PADDED | ✅ |
 <!-- matrix:end -->
 

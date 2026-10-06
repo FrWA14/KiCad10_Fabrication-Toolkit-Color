@@ -91,6 +91,21 @@ def main():
     dlg.chk_silk["top"].SetValue(True)
     dlg.on_options(None)
 
+    # silkscreen printed in colour on the top face
+    dlg.set_side("top")
+    dlg.set_silk_print("top", True, "#c0392b")
+    c.render_to_bitmap(900, 900).SaveFile(os.path.join(OUT, "editor_top_silkprint.png"), wx.BITMAP_TYPE_PNG)
+    silk_result = dlg.result_silk()
+    check(silk_result["top"] == {"enabled": True, "color": "#C0392B"} and silk_result["bottom"] is None,
+          "silk print result", failures)
+    if view["silk"]["top"]:
+        canvas = pl.compose(view, "top", None, silk=silk_result["top"])
+        colours = canvas.getcolors(maxcolors=1 << 20) or []
+        check(any(col[:3] == (0xC0, 0x39, 0x2B) and col[3] == 255 for _, col in colours),
+              "silkscreen rendered in the chosen colour", failures)
+        with open(os.path.join(OUT, "composite_silk_only_small.png"), "wb") as fh:
+            fh.write(pl.preview_bytes(canvas, 900))
+
     result = dlg.result()
     check(set(result) == {"top", "bottom"} and all(result.values()), "dialog result", failures)
     pl.save_placements(os.path.join(OUT, "placement.json"), result, view)

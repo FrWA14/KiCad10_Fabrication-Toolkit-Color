@@ -82,14 +82,35 @@ class PlacementTests(unittest.TestCase):
         self.assertIn((45, 0), g["outlines"][0])
         self.assertEqual(side_geometry(VIEW, "top")["footprints"][0]["x"], 8)
 
+    def test_silkscreen_as_image(self):
+        view = dict(VIEW, silk={"top": [[(20, 5), (24, 5), (24, 9), (20, 9)]], "bottom": []})
+        c = pl.compose(view, "top", None, silk={"enabled": True, "color": "#ff0000"})
+        self.assertEqual(c.getpixel((int(22 * PX), int(7 * PX))), (255, 0, 0, 255))   # silk, no picture
+        self.assertEqual(c.getchannel("A").getpixel((int(30 * PX), int(7 * PX))), 0)   # elsewhere: no ink
+        # On top of a picture, the silkscreen wins.
+        p = {"image": self.logo, "cx": 25, "cy": 15, "w": 50, "h": 30, "rot": 0}
+        c = pl.compose(view, "top", p, silk={"enabled": True, "color": "#00FF00"})
+        self.assertEqual(c.getpixel((int(22 * PX), int(7 * PX)))[:3], (0, 255, 0))
+        # Bottom face: B.Silkscreen mirrored into the bottom view.
+        view_b = dict(VIEW, silk={"top": [], "bottom": [[(20, 5), (24, 5), (24, 9), (20, 9)]]})
+        cb = pl.compose(view_b, "bottom", None, silk={"enabled": True, "color": "#0000ff"})
+        self.assertEqual(cb.getpixel((int(28 * PX), int(7 * PX))), (0, 0, 255, 255))  # x' = 50 - 22
+        self.assertEqual(cb.getchannel("A").getpixel((int(22 * PX), int(7 * PX))), 0)
+        # disabled / invalid
+        self.assertIsNone(pl.normalize_silk({"enabled": False, "color": "#000000"}))
+        with self.assertRaises(ColorSilkError):
+            pl.normalize_silk({"enabled": True, "color": "red"})
+
     def test_save_composite_and_json(self):
         out = os.path.join(OUT, "placement_unit")
         shutil.rmtree(out, ignore_errors=True)
         p = {"image": self.logo, "cx": 25, "cy": 15, "w": 50, "h": 30, "rot": 0}
         path, preview = pl.save_composite(pl.compose(VIEW, "top", p), out, "top")
         self.assertTrue(path.endswith(".png") and os.path.exists(preview))
-        pl.save_placements(os.path.join(out, "p.json"), {"top": p, "bottom": None}, VIEW)
+        silk = {"top": None, "bottom": {"enabled": True, "color": "#ABCDEF"}}
+        pl.save_placements(os.path.join(out, "p.json"), {"top": p, "bottom": None}, VIEW, silk)
         self.assertEqual(pl.load_placements(os.path.join(out, "p.json")), {"top": p, "bottom": None})
+        self.assertEqual(pl.load_silk(os.path.join(out, "p.json")), silk)
         self.assertAlmostEqual(pl.effective_dpi(p, (1200, 720)), 609.6)
 
 

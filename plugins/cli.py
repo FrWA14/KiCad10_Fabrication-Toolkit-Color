@@ -43,6 +43,8 @@ if __name__ == '__main__':
     parser.add_argument("--placement",          type=str, help="Placement JSON from the editor (color_placement.json): position/size per face", metavar="FILE")
     parser.add_argument("--edaVersion",         type=str, help="eda-version written in the colour SVGs (default 2.4(2026-05-08))", metavar="V")
     parser.add_argument("--easyedaVersion",     type=str, help="EasyEDA Pro version in the Gerber headers (default 3.2.148)", metavar="V")
+    parser.add_argument("--topSilkColor",       type=str, help="Print F.Silkscreen inside the colour image in this colour (#RRGGBB)", metavar="COLOR")
+    parser.add_argument("--bottomSilkColor",    type=str, help="Print B.Silkscreen inside the colour image in this colour (#RRGGBB)", metavar="COLOR")
     parser.add_argument("--debugSvg",           type=str, help="Also write the plaintext colour SVGs to this folder", metavar="DIR")
     args = parser.parse_args()
 
@@ -72,11 +74,16 @@ if __name__ == '__main__':
     options[COLOR_DEBUG_SVG_OPT] = os.path.abspath(args.debugSvg) if args.debugSvg else None
     options[COLOR_EDA_VERSION_OPT] = args.edaVersion
     options[COLOR_EASYEDA_VERSION_OPT] = args.easyedaVersion
+    options[TOP_SILK_OPT] = {"enabled": True, "color": args.topSilkColor} if args.topSilkColor else None
+    options[BOTTOM_SILK_OPT] = {"enabled": True, "color": args.bottomSilkColor} if args.bottomSilkColor else None
     if args.placement:
         from .color_silkscreen.placement import load_placements
         placements = load_placements(args.placement)
         options[TOP_PLACEMENT_OPT] = placements["top"]
         options[BOTTOM_PLACEMENT_OPT] = placements["bottom"]
+        from .color_silkscreen.placement import load_silk
+        for side, key in (("top", TOP_SILK_OPT), ("bottom", BOTTOM_SILK_OPT)):
+            options[key] = options[key] or load_silk(args.placement)[side]
 
     openBrowser = args.openBrowser
     nonInteractive = args.nonInteractive

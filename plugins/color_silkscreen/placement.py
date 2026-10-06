@@ -13,6 +13,7 @@ so the colour pipeline maps it 1:1 onto the Gerber outline.
 import io
 import json
 import os
+import re
 
 from .board_view import side_geometry
 from .errors import ColorSilkError
@@ -31,6 +32,16 @@ def normalize(p):
     if out["w"] <= 0 or out["h"] <= 0:
         raise ColorSilkError("E_PLACEMENT", "Taille d'image nulle ou négative.")
     return out
+
+
+def normalize_silk(silk):
+    """{"enabled": bool, "color": "#RRGGBB"} -> same, validated; None when disabled."""
+    if not silk or not silk.get("enabled"):
+        return None
+    color = str(silk.get("color") or "#000000").strip()
+    if not re.fullmatch(r"#[0-9a-fA-F]{6}", color):
+        raise ColorSilkError("E_PLACEMENT", "Couleur de sérigraphie invalide : {} (format #RRGGBB).".format(color))
+    return {"enabled": True, "color": color.upper()}
 
 
 def rotated_size(px_w, px_h, rot):
@@ -64,16 +75,43 @@ def _open(path):
     return img
 
 
-def compose(view, side, placement, dpi=DPI):
-    """Return an RGBA PIL image covering the outline box at `dpi`, clipped to the outline."""
+def compose(view, side, placement, dpi=DPI, silk=None):
+    """Return an RGBA PIL image covering the outline box at `dpi`, clipped to the outline.
+
+    `placement` may be None (no picture on this face). `silk` ({"enabled", "color"})
+    paints the face's F/B.Silkscreen into the image in that colour, on top of the
+    picture: with the colour process the conventional white silkscreen is not
+    printed, so this is how texts and logos still appear on the board."""
     from PIL import Image, ImageChops, ImageDraw, ImageOps
 
     p = normalize(placement)
+    silk = normalize_silk(silk)
     geo = side_geometry(view, side)
     scale = dpi / 25.4
     cw, ch = max(1, round(view["width"] * scale)), max(1, round(view["height"] * scale))
     canvas = Image.new("RGBA", (cw, ch), (255, 255, 255, 0))
+    if p:
+        _paste_image(canvas, p, scale)
+    if silk and geo["silk"]:
+        rgb = tuple(int(silk["color"][i:i + 2], 16) for i in (1, 3, 5))
+        draw = ImageDraw.Draw(canvas)
+        for chain in geo["silk"]:
+            if len(chain) >= 3:
+                draw.polygon([(x * scale, y * scale) for x, y in chain], fill=rgb + (255,))
 
+    mask = Image.new("L", (cw, ch), 0)
+    draw = ImageDraw.Draw(mask)
+    for outline in geo["outlines"]:
+        draw.polygon([(x * scale, y * scale) for x, y in outline], fill=255)
+    for hole in geo["holes"]:
+        draw.polygon([(x * scale, y * scale) for x, y in hole], fill=0)
+    canvas.putalpha(ImageChops.multiply(canvas.getchannel("A"), mask))
+    return canvas
+
+
+def _paste_image(canvas, p, scale):
+    from PIL import Image, ImageOps
+    cw, ch = canvas.size
     src = _open(p["image"])
     src = ImageOps.exif_transpose(src).convert("RGBA")
     if p["rot"]:
@@ -89,15 +127,6 @@ def compose(view, side, placement, dpi=DPI):
                min(max((ix1 - left) * sx, 0.0), src.width), min(max((iy1 - top) * sy, 0.0), src.height))
         part = src.resize((ix1 - ix0, iy1 - iy0), Image.Resampling.LANCZOS, box=box)
         canvas.paste(part, (ix0, iy0))
-
-    mask = Image.new("L", (cw, ch), 0)
-    draw = ImageDraw.Draw(mask)
-    for outline in geo["outlines"]:
-        draw.polygon([(x * scale, y * scale) for x, y in outline], fill=255)
-    for hole in geo["holes"]:
-        draw.polygon([(x * scale, y * scale) for x, y in hole], fill=0)
-    canvas.putalpha(ImageChops.multiply(canvas.getchannel("A"), mask))
-    return canvas
 
 
 def save_composite(canvas, out_dir, side):
@@ -116,10 +145,13 @@ def save_composite(canvas, out_dir, side):
     return jpg, png
 
 
-def save_placements(path, placements, view):
+def save_placements(path, placements, view, silk=None):
     data = {"board_mm": [view["width"], view["height"]], "origin_mm": list(view["origin_mm"]),
             "frame": "mm, origine coin haut-gauche du contour, Y vers le bas ; dessous vu de dessous"}
     data.update({side: placements[side] for side in ("top", "bottom") if placements.get(side)})
+    silk = {side: normalize_silk((silk or {}).get(side)) for side in ("top", "bottom")}
+    if any(silk.values()):
+        data["silk"] = {side: v for side, v in silk.items() if v}
     with open(path, "w", encoding="utf-8") as fh:
         json.dump(data, fh, indent=2, ensure_ascii=False)
 
@@ -128,6 +160,12 @@ def load_placements(path):
     with open(path, encoding="utf-8") as fh:
         data = json.load(fh)
     return {side: normalize(data.get(side)) for side in ("top", "bottom")}
+
+
+def load_silk(path):
+    with open(path, encoding="utf-8") as fh:
+        data = json.load(fh).get("silk") or {}
+    return {side: normalize_silk(data.get(side)) for side in ("top", "bottom")}
 
 
 def preview_bytes(canvas, max_px=1024):
