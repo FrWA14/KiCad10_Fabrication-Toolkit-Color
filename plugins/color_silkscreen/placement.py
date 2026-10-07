@@ -16,7 +16,7 @@ import os
 import re
 
 from .board_view import side_geometry
-from .errors import ColorSilkError
+from .errors import ColorSilkError  # noqa: F401  (re-exported for the editor)
 
 DPI = 1200
 MAX_PNG_BYTES = 3 * 1024 * 1024  # larger composites are written as JPEG (white = no ink anyway)
@@ -75,7 +75,17 @@ def _open(path):
     return img
 
 
-def compose(view, side, placement, dpi=DPI, silk=None):
+def normalize_offset(offset):
+    """(dx, dy) printing correction in mm, view frame of the face; None/0 = no correction."""
+    if not offset:
+        return (0.0, 0.0)
+    dx, dy = float(offset[0]), float(offset[1])
+    if abs(dx) > 5 or abs(dy) > 5:
+        raise ColorSilkError("E_PLACEMENT", "Correction d'impression trop grande ({:.2f}, {:.2f} mm, max 5 mm).".format(dx, dy))
+    return (dx, dy)
+
+
+def compose(view, side, placement, dpi=DPI, silk=None, offset=None, calibration=False):
     """Return an RGBA PIL image covering the outline box at `dpi`, clipped to the outline.
 
     `placement` may be None (no picture on this face). `silk` ({"enabled", "color"})
@@ -86,18 +96,22 @@ def compose(view, side, placement, dpi=DPI, silk=None):
 
     p = normalize(placement)
     silk = normalize_silk(silk)
+    dx, dy = normalize_offset(offset)
     geo = side_geometry(view, side)
     scale = dpi / 25.4
     cw, ch = max(1, round(view["width"] * scale)), max(1, round(view["height"] * scale))
     canvas = Image.new("RGBA", (cw, ch), (255, 255, 255, 0))
+    # The printing correction moves the artwork only; the outline clip stays where the board is.
     if p:
-        _paste_image(canvas, p, scale)
+        _paste_image(canvas, dict(p, cx=p["cx"] + dx, cy=p["cy"] + dy), scale)
     if silk and geo["silk"]:
         rgb = tuple(int(silk["color"][i:i + 2], 16) for i in (1, 3, 5))
         draw = ImageDraw.Draw(canvas)
         for chain in geo["silk"]:
             if len(chain) >= 3:
-                draw.polygon([(x * scale, y * scale) for x, y in chain], fill=rgb + (255,))
+                draw.polygon([((x + dx) * scale, (y + dy) * scale) for x, y in chain], fill=rgb + (255,))
+    if calibration:
+        _draw_calibration(canvas, geo, side, scale, dx, dy)
 
     mask = Image.new("L", (cw, ch), 0)
     draw = ImageDraw.Draw(mask)
@@ -107,6 +121,48 @@ def compose(view, side, placement, dpi=DPI, silk=None):
         draw.polygon([(x * scale, y * scale) for x, y in hole], fill=0)
     canvas.putalpha(ImageChops.multiply(canvas.getchannel("A"), mask))
     return canvas
+
+
+def _draw_calibration(canvas, geo, side, scale, dx, dy):
+    """Registration test pattern: thin crosshairs and rings centred on every bare-copper
+    pad of the face, 1 mm rulers along the edges, a face label and a +X arrow.
+    In the JLCPCB Gerber Viewer an offset shows as crosshairs off the pad centres."""
+    from PIL import ImageDraw, ImageFont
+    draw = ImageDraw.Draw(canvas)
+    lw = max(1, round(0.08 * scale))
+    red, blue, black = (220, 0, 0, 255), (0, 70, 220, 255), (0, 0, 0, 255)
+
+    def P(x, y):
+        return ((x + dx) * scale, (y + dy) * scale)
+
+    w, h = geo["width"], geo["height"]
+    for i in range(int(w) + 1):  # rulers: 1 mm ticks, longer every 5 / 10 mm
+        tick = 2.0 if i % 10 == 0 else (1.2 if i % 5 == 0 else 0.6)
+        draw.line([P(i, 1.5), P(i, 1.5 + tick)], fill=black, width=lw)
+        draw.line([P(i, h - 1.5), P(i, h - 1.5 - tick)], fill=black, width=lw)
+    for j in range(int(h) + 1):
+        tick = 2.0 if j % 10 == 0 else (1.2 if j % 5 == 0 else 0.6)
+        draw.line([P(1.5, j), P(1.5 + tick, j)], fill=black, width=lw)
+        draw.line([P(w - 1.5, j), P(w - 1.5 - tick, j)], fill=black, width=lw)
+    for pad in geo["pads"]:
+        r = max(pad["w"], pad["h"]) / 2
+        cx, cy = pad["x"], pad["y"]
+        arm = r + 1.0
+        draw.line([P(cx - arm, cy), P(cx + arm, cy)], fill=red, width=lw)
+        draw.line([P(cx, cy - arm), P(cx, cy + arm)], fill=red, width=lw)
+        x0, y0 = P(cx - r - 0.3, cy - r - 0.3)
+        x1, y1 = P(cx + r + 0.3, cy + r + 0.3)
+        draw.ellipse([x0, y0, x1, y1], outline=blue, width=lw)
+    try:
+        font = ImageFont.load_default(size=round(3.0 * scale))
+    except TypeError:  # Pillow < 10.1
+        font = ImageFont.load_default()
+    label = "TOP (vue de dessus)" if side == "top" else "BOTTOM (vue de dessous)"
+    draw.text(P(w / 2 - 14, h / 2 - 2), label, fill=black, font=font)
+    ax, ay = w / 2 - 6, h / 2 + 4  # +X arrow: shows whether the face is mirrored
+    draw.line([P(ax, ay), P(ax + 12, ay)], fill=black, width=lw * 3)
+    draw.polygon([P(ax + 12, ay - 1), P(ax + 14, ay), P(ax + 12, ay + 1)], fill=black)
+    draw.text(P(ax + 15, ay - 1.8), "+X", fill=black, font=font)
 
 
 def _paste_image(canvas, p, scale):

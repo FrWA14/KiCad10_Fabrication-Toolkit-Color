@@ -58,6 +58,7 @@ Le dossier `svg/` contient les SVG en clair (option `--debugSvg`). On peut les o
 | T7-huge | T7 | huge.png | — | — | ok | ok | W_IMAGE_RESAMPLED | ✅ |
 | T3-placement | T3 | logo.png (placé) | photo.jpg (placé, 90°) | --placement AUTO | ok | ok | — | ✅ |
 | T2-silk-only | T2 | — | — | --topSilkColor #C0392B | ok | ok | — | ✅ |
+| T5-calibration | T5 | — | — | --calibration --bottomOffset=-0.3,0 | ok | ok | W_CALIBRATION | ✅ |
 | T7-contain | T7 | logo.png | — | --colorFit contain | ok | ok | W_IMAGE_PADDED | ✅ |
 <!-- matrix:end -->
 
@@ -97,6 +98,14 @@ Le dossier `svg/` contient les SVG en clair (option `--debugSvg`). On peut les o
    **Résultat : C est accepté** (option sélectionnable, aperçu couleur correct dans le Gerber Viewer). A et B
    n'ont pas été testés : on ne sait pas lequel des deux marqueurs est contrôlé, mais les valeurs par défaut de
    la 0.2.3 fonctionnent. Le profil `transjlc` (anciennes valeurs) est refusé par JLCPCB à cette date.
+
+10. **Décalage observé le 7 octobre 2026 (face dessous, image `back.png`, v0.2.4).** Comparaison au pixel de la capture
+    de l'éditeur et de celle du Gerber Viewer, en prenant les 4 trous de fixation comme référence : écart nul en Y
+    (< 0,04 mm) ; en X l'image est plus à droite chez JLCPCB, de +0,26 mm (côté gauche) à +0,38 mm (côté droit).
+    Notre chaîne (éditeur = composite = SVG) est cohérente à 0,01 mm près : l'écart vient de l'interprétation par
+    JLCPCB (visualiseur, ou axe de miroir de la face dessous). On ignore s'il existe aussi sur la face dessus et sur la
+    carte imprimée. Ajouts 0.2.5 : correction d'impression par face et mire de calage
+    (`out/jlc_tests/RP2350_mire_calage.zip`) pour mesurer l'écart sur les deux faces.
 
 ## Validation manuelle chez JLCPCB (à faire par l'utilisateur)
 

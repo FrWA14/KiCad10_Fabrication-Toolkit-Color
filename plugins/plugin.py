@@ -6,7 +6,7 @@ import pcbnew  # type: ignore
 from .thread import ProcessThread
 from .events import StatusEvent
 from .options import AUTO_FILL_OPT, AUTO_TRANSLATE_OPT, EXCLUDE_DNP_OPT, EXTEND_EDGE_CUT_OPT, ALTERNATIVE_EDGE_CUT_OPT, EXTRA_LAYERS, ALL_ACTIVE_LAYERS_OPT, ARCHIVE_NAME, OPEN_BROWSER_OPT, BACKUP_OPT
-from .options import TOP_IMAGE_OPT, BOTTOM_IMAGE_OPT, COLOR_FIT_OPT, COLOR_PROFILE_OPT, TOP_PLACEMENT_OPT, BOTTOM_PLACEMENT_OPT, TOP_SILK_OPT, BOTTOM_SILK_OPT
+from .options import TOP_IMAGE_OPT, BOTTOM_IMAGE_OPT, COLOR_FIT_OPT, COLOR_PROFILE_OPT, TOP_PLACEMENT_OPT, BOTTOM_PLACEMENT_OPT, TOP_SILK_OPT, BOTTOM_SILK_OPT, TOP_OFFSET_OPT, BOTTOM_OFFSET_OPT, COLOR_CALIBRATION_OPT
 from .version import VERSION
 from .utils import load_user_options, save_user_options, get_layer_names
 
@@ -49,7 +49,11 @@ class KiCadToJLCForm(wx.Frame):
             BOTTOM_PLACEMENT_OPT: None,
             TOP_SILK_OPT: None,
             BOTTOM_SILK_OPT: None,
+            TOP_OFFSET_OPT: None,
+            BOTTOM_OFFSET_OPT: None,
+            COLOR_CALIBRATION_OPT: False,
         })
+        self.offsets = {"top": userOptions[TOP_OFFSET_OPT], "bottom": userOptions[BOTTOM_OFFSET_OPT]}
         self.silk = {"top": userOptions[TOP_SILK_OPT], "bottom": userOptions[BOTTOM_SILK_OPT]}
         self.placements = {"top": userOptions[TOP_PLACEMENT_OPT], "bottom": userOptions[BOTTOM_PLACEMENT_OPT]}
         self.userOptions = userOptions
@@ -101,6 +105,10 @@ class KiCadToJLCForm(wx.Frame):
         self.mPlacementButton = wx.Button(self, label="Placer / redimensionner les images (vues dessus et dessous)…")
         self.mPlacementButton.Bind(wx.EVT_BUTTON, self.onPlacementButtonClick)
         self.mPlacementLabel = wx.StaticText(self, label="")
+        self.mCalibrationCheckbox = wx.CheckBox(self, label="Mire de calage à la place des images (test d'alignement JLCPCB)")
+        self.mCalibrationCheckbox.SetValue(bool(userOptions[COLOR_CALIBRATION_OPT]))
+        self.mCalibrationCheckbox.SetToolTip("Imprime des croix centrées sur chaque pastille des deux faces : dans le Gerber "
+                                             "Viewer, l'écart croix/pastille donne la correction X/Y à saisir dans l'éditeur.")
         for picker in (self.mTopImagePicker, self.mBottomImagePicker):
             picker.Bind(wx.EVT_FILEPICKER_CHANGED, lambda e: self.updatePlacementLabel())
         self.updatePlacementLabel()
@@ -135,6 +143,7 @@ class KiCadToJLCForm(wx.Frame):
         boxSizer.Add(self.mColorFitCheckbox, 0, wx.ALL, 5)
         boxSizer.Add(self.mPlacementButton, 0, wx.ALL | wx.EXPAND, 5)
         boxSizer.Add(self.mPlacementLabel, 0, wx.LEFT | wx.RIGHT, 5)
+        boxSizer.Add(self.mCalibrationCheckbox, 0, wx.ALL, 5)
         boxSizer.Add(self.mGaugeStatus, 0, wx.ALL, 5)
         boxSizer.Add(self.mGenerateButton, 0, wx.ALL, 5)
 
@@ -174,6 +183,9 @@ class KiCadToJLCForm(wx.Frame):
             options[key] = self.userOptions.get(key) or None
         options[TOP_PLACEMENT_OPT] = self.placementFor("top", options[TOP_IMAGE_OPT])
         options[BOTTOM_PLACEMENT_OPT] = self.placementFor("bottom", options[BOTTOM_IMAGE_OPT])
+        options[TOP_OFFSET_OPT] = self.offsets.get("top")
+        options[BOTTOM_OFFSET_OPT] = self.offsets.get("bottom")
+        options[COLOR_CALIBRATION_OPT] = self.mCalibrationCheckbox.GetValue()
         options[TOP_SILK_OPT] = self.silk.get("top")
         options[BOTTOM_SILK_OPT] = self.silk.get("bottom")
 
@@ -191,7 +203,7 @@ class KiCadToJLCForm(wx.Frame):
         self.mOpenBrowserCheckbox.Hide()
         self.mBackupCheckbox.Hide()
         for control in (self.mColorLabel, self.mTopImageLabel, self.mTopImagePicker, self.mBottomImageLabel,
-                        self.mBottomImagePicker, self.mColorFitCheckbox, self.mPlacementButton, self.mPlacementLabel):
+                        self.mBottomImagePicker, self.mColorFitCheckbox, self.mPlacementButton, self.mPlacementLabel, self.mCalibrationCheckbox):
             control.Hide()
         self.mGenerateButton.Hide()
         self.mGaugeStatus.Show()
@@ -220,6 +232,9 @@ class KiCadToJLCForm(wx.Frame):
                 text += "{:.1f} x {:.1f} mm".format(p["w"], p["h"]) if p else "sans image"
                 if silk:
                     text += " + sérigraphie {}".format(silk["color"])
+                off = (self.offsets or {}).get(side)
+                if off and any(off):
+                    text += " (correction {:+.2f} / {:+.2f} mm)".format(off[0], off[1])
                 parts.append(text)
         self.mPlacementLabel.SetLabel("Placement : " + (" ; ".join(parts) if parts else
                                       "aucun (l'image couvre tout le contour)"))
@@ -237,7 +252,7 @@ class KiCadToJLCForm(wx.Frame):
         for side, picker in (("top", self.mTopImagePicker), ("bottom", self.mBottomImagePicker)):
             image = picker.GetPath().strip()
             current[side] = self.placementFor(side, image)
-        dlg = PlacementDialog(self, view, current, self.silk)
+        dlg = PlacementDialog(self, view, current, self.silk, self.offsets)
         for side, picker in (("top", self.mTopImagePicker), ("bottom", self.mBottomImagePicker)):
             image = picker.GetPath().strip()
             if image and not current[side] and os.path.isfile(image):
@@ -246,6 +261,7 @@ class KiCadToJLCForm(wx.Frame):
         if dlg.ShowModal() == wx.ID_OK:
             self.placements = dlg.result()
             self.silk = dlg.result_silk()
+            self.offsets = dlg.result_offsets()
             for side, picker in (("top", self.mTopImagePicker), ("bottom", self.mBottomImagePicker)):
                 picker.SetPath(self.placements[side]["image"] if self.placements[side] else "")
             self.updatePlacementLabel()

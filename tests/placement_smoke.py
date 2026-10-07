@@ -106,6 +106,16 @@ def main():
         with open(os.path.join(OUT, "composite_silk_only_small.png"), "wb") as fh:
             fh.write(pl.preview_bytes(canvas, 900))
 
+    dlg.set_side("bottom")
+    dlg.offset_fields[0].ChangeValue("-0,3")
+    dlg.offset_fields[1].ChangeValue("0.05")
+    dlg.on_offset()
+    dlg.set_side("top")
+    dlg.set_side("bottom")
+    check(dlg.result_offsets() == {"top": None, "bottom": [-0.3, 0.05]} and dlg.offset_fields[0].GetValue() == "-0.30",
+          "printing correction per face", failures)
+    dlg.set_side("top")
+
     result = dlg.result()
     check(set(result) == {"top", "bottom"} and all(result.values()), "dialog result", failures)
     pl.save_placements(os.path.join(OUT, "placement.json"), result, view)

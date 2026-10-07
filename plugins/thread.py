@@ -222,7 +222,7 @@ class ProcessThread(Thread):
 
     def color_requested(self):
         silk = any((self.options.get(k) or {}).get("enabled") for k in (TOP_SILK_OPT, BOTTOM_SILK_OPT))
-        return silk or any(self.options.get(k) for k in (TOP_IMAGE_OPT, BOTTOM_IMAGE_OPT, TOP_PLACEMENT_OPT, BOTTOM_PLACEMENT_OPT))
+        return silk or bool(self.options.get(COLOR_CALIBRATION_OPT)) or any(self.options.get(k) for k in (TOP_IMAGE_OPT, BOTTOM_IMAGE_OPT, TOP_PLACEMENT_OPT, BOTTOM_PLACEMENT_OPT))
 
     def start_color_report(self, project_directory):
         if not self.color_requested():
@@ -281,8 +281,15 @@ class ProcessThread(Thread):
                       "bottom": pl.normalize(self.options.get(BOTTOM_PLACEMENT_OPT))}
         silk = {"top": pl.normalize_silk(self.options.get(TOP_SILK_OPT)),
                 "bottom": pl.normalize_silk(self.options.get(BOTTOM_SILK_OPT))}
-        if not any(placements.values()) and not any(silk.values()):
+        offsets = {"top": pl.normalize_offset(self.options.get(TOP_OFFSET_OPT)),
+                   "bottom": pl.normalize_offset(self.options.get(BOTTOM_OFFSET_OPT))}
+        calibration = bool(self.options.get(COLOR_CALIBRATION_OPT))
+        shifted = any(offsets[s] != (0.0, 0.0) and (images[s] or silk[s]) for s in ("top", "bottom"))
+        if not any(placements.values()) and not any(silk.values()) and not shifted and not calibration:
             return images
+        if calibration:
+            report.warn({"code": "W_CALIBRATION",
+                         "message": "Mire de calage : les images sont remplacées par la mire sur les deux faces."})
         if self.options.get(ALTERNATIVE_EDGE_CUT_OPT):
             report.warn({"code": "W_PLACEMENT_ALT_EDGE",
                          "message": "Placement calculé sur Edge.Cuts alors que User.2 sert de contour."})
@@ -294,7 +301,9 @@ class ProcessThread(Thread):
                              "message": "Placement {} ignoré : il concerne {} et non {}.".format(
                                  side, os.path.basename(p["image"]), os.path.basename(images[side]))})
                 p = None
-            if not p and images[side] and silk[side]:
+            if calibration:
+                p = None
+            elif not p and images[side] and (silk[side] or offsets[side] != (0.0, 0.0)):
                 # plain image + silkscreen: the image covers the outline box like before
                 from PIL import Image
                 with Image.open(images[side]) as im:
@@ -304,7 +313,7 @@ class ProcessThread(Thread):
                 else:
                     p = {"image": images[side], "cx": view["width"] / 2, "cy": view["height"] / 2,
                          "w": view["width"], "h": view["height"], "rot": 0}
-            if not p and not silk[side]:
+            if not p and not silk[side] and not calibration:
                 continue
             if silk[side] and not view["silk"][side]:
                 report.warn({"code": "W_NO_SILKSCREEN",
@@ -314,11 +323,12 @@ class ProcessThread(Thread):
                 from PIL import Image
                 with Image.open(p["image"]) as im:
                     dpi = pl.effective_dpi(p, im.size)
-            canvas = pl.compose(view, side, p, silk=silk[side])
+            canvas = pl.compose(view, side, p, silk=silk[side], offset=offsets[side], calibration=calibration)
             path, preview = pl.save_composite(canvas, self.color_out_dir, side)
             report.step("compose_" + side, image=p["image"] if p else None, placement_mm=p,
                         source_dpi=round(dpi, 1) if dpi else None, silk=silk[side],
-                        silk_shapes=len(view["silk"][side]), composite=path, pixels=list(canvas.size))
+                        silk_shapes=len(view["silk"][side]), offset_mm=list(offsets[side]),
+                        calibration=calibration, composite=path, pixels=list(canvas.size))
             if dpi is not None and dpi < 150:
                 report.warn({"code": "W_IMAGE_LOW_DPI",
                              "message": "Image {} imprimée à {:.0f} DPI effectifs (< 150) : rendu flou probable.".format(side, dpi)})

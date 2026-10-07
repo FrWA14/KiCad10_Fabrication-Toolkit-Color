@@ -305,7 +305,7 @@ class PlacementCanvas(wx.Panel):
 
 
 class PlacementDialog(wx.Dialog):
-    def __init__(self, parent, view, placements, silk=None):
+    def __init__(self, parent, view, placements, silk=None, offsets=None):
         super().__init__(parent, title="Sérigraphie couleur — placement des images (v{})".format(VERSION),
                          style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
         self.view = view
@@ -315,6 +315,7 @@ class PlacementDialog(wx.Dialog):
         self.canvas = PlacementCanvas(self, view, self.placements, self.sync_fields)
         self.silk_print = {side: (dict(silk[side]) if silk and silk.get(side) else {"enabled": False, "color": "#000000"})
                            for side in SIDES}
+        self.offsets = {side: list(pl.normalize_offset((offsets or {}).get(side))) for side in SIDES}
 
         buttons = wx.BoxSizer(wx.HORIZONTAL)
         self.btn = {}
@@ -356,7 +357,17 @@ class PlacementDialog(wx.Dialog):
         self.silk_colour.SetToolTip("Couleur de la sérigraphie imprimée")
         printing.Add(self.chk_print_silk, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
         printing.Add(wx.StaticText(self, label="Couleur :"), 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
-        printing.Add(self.silk_colour, 0, wx.ALIGN_CENTER_VERTICAL)
+        printing.Add(self.silk_colour, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 16)
+        printing.Add(wx.StaticText(self, label="Correction d'impression X / Y (mm) :"), 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
+        self.offset_fields = []
+        for _ in range(2):
+            ctrl = wx.TextCtrl(self, size=wx.Size(55, -1), style=wx.TE_PROCESS_ENTER)
+            ctrl.SetToolTip("Décale toute l'impression couleur de cette face pour compenser un écart mesuré avec la mire "
+                            "de calage (vue de la face, X vers la droite, Y vers le bas). L'aperçu reste à la position voulue.")
+            ctrl.Bind(wx.EVT_TEXT_ENTER, self.on_offset)
+            ctrl.Bind(wx.EVT_KILL_FOCUS, lambda e: (self.on_offset(e), e.Skip()))
+            printing.Add(ctrl, 0, wx.RIGHT, 4)
+            self.offset_fields.append(ctrl)
         self.chk_print_silk.Bind(wx.EVT_CHECKBOX, self.on_silk_print)
         self.silk_colour.Bind(wx.EVT_COLOURPICKER_CHANGED, self.on_silk_print)
 
@@ -415,8 +426,21 @@ class PlacementDialog(wx.Dialog):
         state["enabled"] = self.chk_print_silk.GetValue()
         state["color"] = self.silk_colour.GetColour().GetAsString(wx.C2S_HTML_SYNTAX)
         self.silk_colour.Enable(state["enabled"])
+        self.show_offset()
         self.canvas.silk_print = {s: (v if v["enabled"] else None) for s, v in self.silk_print.items()}
         self.canvas.Refresh()
+
+    def on_offset(self, _=None):
+        try:
+            values = [float(c.GetValue().replace(",", ".") or 0) for c in self.offset_fields]
+            self.offsets[self.canvas.side] = list(pl.normalize_offset(values))
+        except (ValueError, pl.ColorSilkError):
+            pass
+        self.show_offset()
+
+    def show_offset(self):
+        for ctrl, v in zip(self.offset_fields, self.offsets[self.canvas.side]):
+            ctrl.ChangeValue("{:.2f}".format(v))
 
     def set_silk_print(self, side, enabled, color="#000000"):
         self.silk_print[side] = {"enabled": bool(enabled), "color": color}
@@ -517,6 +541,9 @@ class PlacementDialog(wx.Dialog):
             self.dpi_label.SetForegroundColour(wx.Colour(200, 40, 40) if dpi < 150 else wx.Colour(30, 120, 40))
         else:
             self.dpi_label.SetLabel("")
+
+    def result_offsets(self):
+        return {s: (list(v) if any(v) else None) for s, v in self.offsets.items()}
 
     def result_silk(self):
         return {s: (pl.normalize_silk(v) if v["enabled"] else None) for s, v in self.silk_print.items()}

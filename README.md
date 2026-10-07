@@ -32,7 +32,7 @@ python tools/build_pcm.py
 ```
 
 Puis dans KiCad 10 : *Gestionnaire de plugins et de contenus → Installer depuis un fichier…* →
-`dist/fabrication-toolkit-color-0.2.4.zip`.
+`dist/fabrication-toolkit-color-0.2.5.zip`.
 
 **Copie de développement** : copier (ou lier) le dossier `plugins/` dans
 `%USERPROFILE%\Documents\KiCad\10.0\scripting\plugins\fabrication_toolkit_color\`, puis *Outils → Plugins externes →
@@ -70,6 +70,9 @@ déposée), composants de la face en gris, contour Edge.Cuts en vert.
   **Rotation 90°**, **Retirer**. Champs Centre X/Y, Largeur, Hauteur en mm, et résolution effective (DPI, en rouge
   sous 150).
 - **Aperçu découpé au contour** : montre déjà ce qui restera.
+- **Correction d'impression X / Y (mm)**, par face : décale toute l'impression couleur de la face (image et sérigraphie
+  imprimée) pour compenser un écart mesuré chez JLCPCB. Repère de la vue affichée : X vers la droite, Y vers le bas.
+  L'aperçu reste à la position voulue ; seul l'export est décalé.
 - **Imprimer la sérigraphie de cette face dans l'image couleur** + **Couleur** : avec le procédé couleur (PCB blanc,
   ENIG), la sérigraphie blanche classique n'apparaît pas. Cette option dessine F.Silkscreen (vue de dessus) ou
   B.Silkscreen (vue de dessous) **dans l'image**, au-dessus de la photo, dans la couleur choisie. Elle fonctionne aussi
@@ -82,6 +85,17 @@ fermé Edge.Cuts (et des découpes internes) est retiré**. Cette image découp�
 `.FCTS` / `.FCBS` du ZIP, avec sa position. Copies lisibles dans `production/` :
 `color_top_composite.png`, `color_bottom_composite.png` (ou `.jpg` au-delà de 3 Mo) et `color_placement.json`.
 Ces fichiers restent **hors** du ZIP envoyé à JLCPCB, pour ne pas perturber leur contrôle des fichiers.
+
+### Mire de calage
+
+Case **« Mire de calage à la place des images »** dans la fenêtre principale (ou `--calibration`) : sur les deux faces,
+l'image est remplacée par des croix rouges et des cercles bleus centrés sur chaque pastille de cuivre nu, des règles
+graduées au millimètre le long des bords et une flèche « +X ». Dans le Gerber Viewer de JLCPCB, zoomer sur les
+pastilles des quatre coins :
+- croix centrées : rien à corriger ;
+- croix décalées d'une même valeur partout : saisir l'opposé dans « Correction d'impression » (ex. croix 0,3 mm trop
+  à droite → X = −0,30) ;
+- décalage qui grandit d'un bord à l'autre : écart d'échelle, à me signaler avec des captures.
 
 ### En ligne de commande (sans interface)
 
@@ -96,6 +110,8 @@ Ces fichiers restent **hors** du ZIP envoyé à JLCPCB, pour ne pas perturber le
 | `--colorProfile default\|transjlc` | `transjlc` reproduit la sortie de TransJLC 0.4.0, bugs compris (voir TESTS.md) |
 | `--report PATH`, `--log PATH` | rapport JSON et log (défaut : dans `production/`) |
 | `--topSilkColor`, `--bottomSilkColor` | `#RRGGBB` : imprime F/B.Silkscreen dans l'image couleur de cette face (même sans image) |
+| `--topOffset DX,DY`, `--bottomOffset=DX,DY` | correction d'impression en mm (valeur négative : écrire `--bottomOffset=-0.3,0`) |
+| `--calibration` | mire de calage sur les deux faces à la place des images |
 | `--placement FILE` | placements de l'éditeur (`color_placement.json`) : position, taille et rotation par face |
 | `--debugSvg DIR` | écrit aussi les SVG **en clair** (avant chiffrement) pour les inspecter dans un navigateur |
 

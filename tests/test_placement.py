@@ -101,6 +101,19 @@ class PlacementTests(unittest.TestCase):
         with self.assertRaises(ColorSilkError):
             pl.normalize_silk({"enabled": True, "color": "red"})
 
+    def test_offset_and_calibration(self):
+        view = dict(VIEW, silk={"top": [[(20, 5), (24, 5), (24, 9), (20, 9)]], "bottom": []})
+        c = pl.compose(view, "top", None, silk={"enabled": True, "color": "#ff0000"}, offset=(1.0, -0.5))
+        self.assertEqual(c.getpixel((int(24.5 * PX), int(6 * PX)))[:3], (255, 0, 0))   # moved +1 mm in X
+        self.assertEqual(c.getchannel("A").getpixel((int(20.5 * PX), int(6 * PX))), 0)
+        with self.assertRaises(ColorSilkError):
+            pl.normalize_offset((6, 0))
+        cal = pl.compose(VIEW, "top", None, calibration=True)
+        # crosshair through the pad centre (10, 15): red pixel there
+        self.assertEqual(cal.getpixel((int(10 * PX), int(15 * PX)))[:3], (220, 0, 0))
+        calb = pl.compose(VIEW, "bottom", None, calibration=True)
+        self.assertEqual(calb.getpixel((int(40 * PX), int(15 * PX)))[:3], (220, 0, 0))  # mirrored pad x = 50 - 10
+
     def test_save_composite_and_json(self):
         out = os.path.join(OUT, "placement_unit")
         shutil.rmtree(out, ignore_errors=True)

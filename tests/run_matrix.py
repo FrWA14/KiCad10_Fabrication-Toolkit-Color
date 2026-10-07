@@ -38,6 +38,8 @@ CASES = [
     ("T3-placement", "T3", None, None, ["--placement", "AUTO"], "ok", None, [],
      {"compose": ["top", "bottom"], "bounds": [100, -110, 150, -80]}),
     ("T2-silk-only", "T2", None, None, ["--topSilkColor", "#C0392B"], "ok", None, [], {"compose": ["top"]}),
+    ("T5-calibration", "T5", None, None, ["--calibration", "--bottomOffset=-0.3,0"], "ok", None, ["W_CALIBRATION"],
+     {"compose": ["top", "bottom"]}),
     ("T7-contain", "T7", "logo.png", None, ["--colorFit", "contain"], "ok", None, ["W_IMAGE_PADDED"], {}),
 ]
 
@@ -81,7 +83,7 @@ def run_case(case):
             names = z.namelist()
     result["zip_files"] = names
 
-    if not top and not bottom and not any(a.endswith("SilkColor") for a in extra):
+    if not top and not bottom and not any(a.endswith("SilkColor") or a == "--calibration" for a in extra):
         status = "ok" if proc.returncode == 0 and names else "error"
         if report is not None:
             problems.append("report written although no image was given")
