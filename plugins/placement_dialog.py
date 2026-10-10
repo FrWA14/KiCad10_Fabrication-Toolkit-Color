@@ -475,6 +475,7 @@ class PlacementDialog(wx.Dialog):
         self.silk_colour.SetColour(wx.Colour(state["color"]))
         self.silk_colour.Enable(state["enabled"])
         self.canvas.silk_print = {s: (v if v["enabled"] else None) for s, v in self.silk_print.items()}
+        self.show_offset()  # saved printing correction of this face
         self.canvas.Refresh()
         self.sync_fields()
 

@@ -41,6 +41,14 @@ def main():
     view = board_view.extract(pcbnew.LoadBoard(board_path))
     print("board", view["width"], "x", view["height"], "mm,", len(view["outlines"][0]), "outline points")
     app = wx.App(False)
+    # saved corrections must be displayed when the editor opens (bug fixed in 0.3.0)
+    reopened = PlacementDialog(None, view, {"top": None, "bottom": None}, None, {"top": None, "bottom": [-0.22, -0.2]})
+    shown = {}
+    for side in ("top", "bottom"):
+        reopened.set_side(side)
+        shown[side] = [c.GetValue() for c in reopened.offset_fields]
+    check(shown == {"top": ["0.00", "0.00"], "bottom": ["-0.22", "-0.20"]}, "saved corrections displayed on reopen", failures)
+    reopened.Destroy()
     dlg = PlacementDialog(None, view, {"top": None, "bottom": None})
     dlg.load_image(top, "top")
     dlg.load_image(bottom, "bottom")
