@@ -137,6 +137,13 @@ Le dossier `svg/` contient les SVG en clair (option `--debugSvg`). On peut les o
     `verify_hash_aperture` la valide. Option de repli « Garder aussi la sérigraphie classique » (`--keepClassicSilk`) =
     comportement 0.2.7. ZIP de test : `out/jlc_tests/RP2350_029_A.zip` (défaut) et `RP2350_029_B.zip` (repli).
 
+15. **Mesure fine de l'alignement JLCPCB (10 octobre 2026, v0.2.9, correction 0/0).** Capture du Gerber Viewer zoomée
+    sur 4 broches IDC (96 px/mm, échelle = pas de 2,54 mm). Disques jaunes de l'image − trous : X +0,244, Y +0,214 mm
+    (écart-type < 0,01 mm). Dans le composite envoyé (`color_bottom_composite.png`), les mêmes disques sont déjà à
+    X +0,232, Y +0,202 mm des broches. **L'aperçu JLCPCB reproduit le fichier à 0,012 mm près** : le décalage vient du
+    placement de l'image (`back.png` décalée d'environ 0,2 mm), pas de JLCPCB. Les mesures 10 et 13 mélangeaient
+    une capture de l'éditeur et un ZIP généré avec un autre placement. Aucune correction par défaut n'est nécessaire.
+
 ## Validation manuelle chez JLCPCB (à faire par l'utilisateur)
 
 Procédure : README, section « Valider chez JLCPCB ». Reporter ici les messages exacts.
