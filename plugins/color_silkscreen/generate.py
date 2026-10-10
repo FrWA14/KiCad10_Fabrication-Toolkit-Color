@@ -20,7 +20,7 @@ class Options:
     def __init__(self, fit="stretch", profile="default", debug_svg_dir=None,
                  public_key_pem=crypto.JLC_RSA_PUBLIC_KEY_PEM, expected_bounds_mm=None,
                  mark_inset_mm=svg_builder.MARK_INSET_MM, key_material=None,
-                 eda_version=None, easyeda_version=None):
+                 eda_version=None, easyeda_version=None, blank_silk_sides=()):
         self.fit = fit                      # 'stretch' | 'contain'
         self.profile = profile              # 'default' | 'transjlc'
         self.debug_svg_dir = debug_svg_dir  # write plaintext SVGs here when set
@@ -31,6 +31,9 @@ class Options:
         transjlc = profile == "transjlc"
         # SVG eda-version and Gerber "EasyEDA Pro vX" header (JLCPCB version checks)
         self.eda_version = eda_version or (svg_builder.EDA_VERSION_TRANSJLC if transjlc else svg_builder.EDA_VERSION)
+        # Faces whose silkscreen is printed inside the colour image: their conventional
+        # silkscreen Gerber is emptied, otherwise JLCPCB prints it again in black on top.
+        self.blank_silk_sides = tuple(blank_silk_sides)
         self.easyeda_version = easyeda_version or (
             jlc_convert.EASYEDA_VERSION_TRANSJLC if transjlc else jlc_convert.EASYEDA_VERSION)
 
@@ -62,6 +65,14 @@ def generate_color_silkscreen(gerber_dir, top_image=None, bottom_image=None, rep
 
     layers, dropped = jlc_convert.convert_directory(gerber_dir, log, app_version=options.easyeda_version)
     report.step("jlc_convert", easyeda_version=options.easyeda_version, eda_version=options.eda_version, files=sorted(os.path.basename(p) for p in layers.values()), dropped=dropped)
+    for side in options.blank_silk_sides:
+        key = "F_SILK" if side == "top" else "B_SILK"
+        if key in layers:
+            jlc_convert.write_blank_silkscreen(layers[key], side, options.easyeda_version)
+            report.step("silk_gerber_blanked", side=side, file=os.path.basename(layers[key]))
+            report.warn({"code": "I_SILK_GERBER_BLANKED",
+                         "message": "Sérigraphie classique {} vidée : elle est imprimée dans l'image couleur.".format(
+                             "dessus" if side == "top" else "dessous")})
 
     outline_text = _read(layers["OUTLINE"])
     bounds = parse_outline_bounds(outline_text, include_arc_extrema=options.profile != "transjlc")

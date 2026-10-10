@@ -34,7 +34,7 @@ python tools/build_pcm.py
 ```
 
 Puis dans KiCad 10 : *Gestionnaire de plugins et de contenus → Installer depuis un fichier…* →
-`dist/fabrication-toolkit-color-0.2.7.zip`.
+`dist/fabrication-toolkit-color-0.2.8.zip`.
 
 **Copie de développement** : copier (ou lier) le dossier `plugins/` dans
 `%USERPROFILE%\Documents\KiCad\10.0\scripting\plugins\fabrication_toolkit_color\`, puis *Outils → Plugins externes →
@@ -80,6 +80,9 @@ déposée), composants de la face en gris, contour Edge.Cuts en vert.
   B.Silkscreen (vue de dessous) **dans l'image**, au-dessus de la photo, dans la couleur choisie. Elle fonctionne aussi
   **sans image** sur la face : seule la sérigraphie est alors imprimée en couleur. Réglage par face, mémorisé avec la
   carte.
+  Le Gerber de sérigraphie classique de cette face est alors **vidé** dans le ZIP : sur un PCB blanc, JLCPCB
+  l'imprimerait sinon en noir par-dessus la couleur. Sans cette option, la sérigraphie classique reste imprimée
+  (en noir) au-dessus de l'image.
 - **Sérigraphie : F.Silkscreen / B.Silkscreen** : la sérigraphie de la face affichée en noir sur le blanc (textes, logos, contours), au-dessus de l'image ; celle de l'autre face en gris léger, en transparence. Décocher pour voir l'image seule.
 
 À la génération, chaque image placée est rendue à 1200 DPI sur toute la carte, puis **tout ce qui sort du contour

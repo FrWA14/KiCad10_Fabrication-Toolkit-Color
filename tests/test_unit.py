@@ -364,6 +364,17 @@ class GenerateTests(unittest.TestCase):
         self.assertLess(steps["svg_top"]["gerber_delta_mm"], 2.0)
         self.assertEqual(steps["mask_top"]["openings"], 4)
 
+    def test_silk_printed_in_colour_blanks_conventional_silkscreen(self):
+        work, _, report = self.run_generate("gen_blank_silk", blank_silk_sides=("top",))
+        gto = read(os.path.join(work, "Gerber_TopSilkscreenLayer.GTO"))
+        self.assertTrue(gto.startswith("G04 EasyEDA Pro v"))
+        self.assertNotIn("%ADD", gto)          # no aperture, nothing drawn
+        self.assertNotIn("D01*", gto)
+        self.assertNotIn("printed in the colour image", read(os.path.join(work, "Gerber_BottomSilkscreenLayer.GBO")))
+        self.assertIn("I_SILK_GERBER_BLANKED", [w["code"] for w in report.data["warnings"]])
+        work2, _, _ = self.run_generate("gen_keep_silk")
+        self.assertIn("%ADD", read(os.path.join(work2, "Gerber_TopSilkscreenLayer.GTO")))
+
     def test_board_mismatch_over_2mm(self):
         with self.assertRaises(ColorSilkError) as cm:
             self.run_generate("gen_mismatch", expected_bounds_mm=(100, -110, 152.5, -80))

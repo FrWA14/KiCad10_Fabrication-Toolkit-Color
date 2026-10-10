@@ -117,6 +117,12 @@ Le dossier `svg/` contient les SVG en clair (option `--debugSvg`). On peut les o
     pastille doit rester ouvert, sinon erreur `E_MASK_COVERED`. Sur la carte RP2350 : 4 doublons + 41 ouvertures
     incluses (dessus), 32 (dessous), aucune pastille couverte. Le profil `transjlc` garde l'ancien comportement.
 
+12. **Sérigraphie en double (10 octobre 2026, corrigé en 0.2.8).** Avec « sérigraphie imprimée dans l'image » en bleu
+    sur le dessus, l'aperçu JLCPCB montrait la sérigraphie en noir par-dessus le bleu : le ZIP contenait toujours
+    `Gerber_TopSilkscreenLayer.GTO`, que JLCPCB imprime en noir sur un PCB blanc. Ce défaut existait depuis la 0.2.4.
+    Désormais, le Gerber de sérigraphie d'une face imprimée en couleur est remplacé par un Gerber vide
+    (en-tête EasyEDA, aucune ouverture, aucun tracé).
+
 ## Validation manuelle chez JLCPCB (à faire par l'utilisateur)
 
 Procédure : README, section « Valider chez JLCPCB ». Reporter ici les messages exacts.

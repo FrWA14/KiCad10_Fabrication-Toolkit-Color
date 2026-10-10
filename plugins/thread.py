@@ -269,7 +269,14 @@ class ProcessThread(Thread):
                             debug_svg_dir=self.options.get(COLOR_DEBUG_SVG_OPT) or None,
                             eda_version=self.options.get(COLOR_EDA_VERSION_OPT) or None,
                             easyeda_version=self.options.get(COLOR_EASYEDA_VERSION_OPT) or None,
+                            blank_silk_sides=self.silk_printed_sides(),
                             expected_bounds_mm=expected))
+
+    def silk_printed_sides(self):
+        if self.options.get(COLOR_CALIBRATION_OPT):
+            return ()
+        return tuple(side for side, key in (("top", TOP_SILK_OPT), ("bottom", BOTTOM_SILK_OPT))
+                     if (self.options.get(key) or {}).get("enabled"))
 
     def compose_placed_images(self, report):
         '''Placed images and/or silkscreen-as-image -> board-sized 1200 DPI composites

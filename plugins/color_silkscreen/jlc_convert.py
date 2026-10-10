@@ -94,6 +94,17 @@ def add_gerber_header(content, now=None, app_version=EASYEDA_VERSION):
     return header + content.replace("\r\n", "\n")
 
 
+def write_blank_silkscreen(path, side, app_version=EASYEDA_VERSION, now=None):
+    """Replace a conventional silkscreen Gerber by an empty one (no aperture, no draw).
+
+    Used when the silkscreen is printed in colour: with a white solder mask JLCPCB
+    prints the conventional silkscreen in black, which would cover the colour print."""
+    body = ("G04 Silkscreen {} printed in the colour image (Fabrication Toolkit Color)*\n"
+            "%FSLAX46Y46*%\n%MOMM*%\n%LPD*%\nM02*\n").format("top" if side == "top" else "bottom")
+    with open(path, "w", encoding="utf-8", newline="") as fh:
+        fh.write(add_gerber_header(body, now, app_version))
+
+
 _APERTURE_SELECT = re.compile(r"^(\s*)(D\d{2,4}\*)")
 
 
