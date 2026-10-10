@@ -36,6 +36,7 @@ Le dossier `svg/` contient les SVG en clair (option `--debugSvg`). On peut les o
 | `test_parity` (6 tests, TransJLC 0.4.0 + patch debug) | KiCad 3.11 | OK |
 | `test_integration` (matrice + non-régression T2/T5 contre FT d'origine) | KiCad 3.11 | OK |
 | `test_placement` (7 tests : cadrage, découpe contour + découpe interne, position, miroir, rotation) | KiCad 3.11 et système 3.14 | OK |
+| `test_preview` (pré-contrôle, perçages, aperçu) | KiCad 3.11 et système 3.14 | OK |
 | `ui_smoke.py` | KiCad 3.11 | OK |
 | `placement_smoke.py` (T2 et copie de la carte RP2350 de l'utilisateur) | KiCad 3.11 | OK |
 
@@ -50,14 +51,14 @@ Le dossier `svg/` contient les SVG en clair (option `--debugSvg`). On peut les o
 | T1-bmp | T1 | bad.bmp | — | — | error / E_IMAGE_FORMAT | error / E_IMAGE_FORMAT | — | ✅ |
 | T1-missing | T1 | nope.png | — | — | error / E_IMAGE_MISSING | error / E_IMAGE_MISSING | — | ✅ |
 | T2-both | T2 | logo.png | photo.jpg | — | ok | ok | — | ✅ |
-| T2-transjlc | T2 | logo.png | photo.jpg | --colorProfile transjlc | ok | ok | — | ✅ |
+| T2-transjlc | T2 | logo.png | photo.jpg | --colorProfile transjlc | error / E_PRECHECK | error / E_PRECHECK | — | ✅ |
 | T3-alpha | T3 | alpha.png | — | — | ok | ok | — | ✅ |
 | T4-auxorigin | T4 | logo.png | — | — | ok | ok | — | ✅ |
 | T5-4layers | T5 | — | photo.jpg | — | ok | ok | — | ✅ |
 | T6-no-outline | T6 | logo.png | — | — | error / E_OUTLINE_MISSING | error / E_OUTLINE_MISSING | — | ✅ |
 | T7-huge | T7 | huge.png | — | — | ok | ok | W_IMAGE_RESAMPLED | ✅ |
 | T3-placement | T3 | logo.png (placé) | photo.jpg (placé, 90°) | --placement AUTO | ok | ok | — | ✅ |
-| T2-silk-only | T2 | — | — | --topSilkColor #C0392B | ok | ok | — | ✅ |
+| T2-silk-only | T2 | — | — | --topSilkColor #C0392B | ok | ok | I_SILK_GERBER_BLANKED | ✅ |
 | T5-calibration | T5 | — | — | --calibration --bottomOffset=-0.3,0 | ok | ok | W_CALIBRATION | ✅ |
 | T7-contain | T7 | logo.png | — | --colorFit contain | ok | ok | W_IMAGE_PADDED | ✅ |
 <!-- matrix:end -->
@@ -143,6 +144,15 @@ Le dossier `svg/` contient les SVG en clair (option `--debugSvg`). On peut les o
     X +0,232, Y +0,202 mm des broches. **L'aperçu JLCPCB reproduit le fichier à 0,012 mm près** : le décalage vient du
     placement de l'image (`back.png` décalée d'environ 0,2 mm), pas de JLCPCB. Les mesures 10 et 13 mélangeaient
     une capture de l'éditeur et un ZIP généré avec un autre placement. Aucune correction par défaut n'est nécessaire.
+
+16. **0.3.0 (10 octobre 2026).** Image de nouveau absente chez JLCPCB après une régénération : l'export de 18:48 est
+    structurellement identique à celui de 17:53 qui fonctionnait (mêmes 16 fichiers, empreintes valides, `.GTO` vidé
+    avec empreinte) ; seules diffèrent la correction d'impression et les valeurs aléatoires. Cause à chercher côté
+    JLCPCB ou parcours d'envoi (tester la sauvegarde `backups/RP2350_2026-10-10_17-53-12.zip`). Corrigé au passage :
+    les corrections X/Y enregistrées s'affichaient vides dans l'éditeur (bug depuis 0.2.5) ; Gerbers sans ouverture
+    déclarée (cuivre fait uniquement de zones) laissés sans empreinte EasyEDA (détecté par le nouveau pré-contrôle).
+    Ajouts : calques (image, sérigraphie noire par défaut, découpe booléenne des ouvertures et perçages), aperçu de
+    l'export reconstruit depuis le ZIP, pré-contrôle automatique.
 
 ## Validation manuelle chez JLCPCB (à faire par l'utilisateur)
 

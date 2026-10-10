@@ -53,6 +53,18 @@ def main():
     dlg.load_image(top, "top")
     dlg.load_image(bottom, "bottom")
     c = dlg.canvas
+    if view["silk"]["top"]:
+        st = dlg.silk_print["top"]
+        check(st["enabled"] and st["color"] == "#000000", "silkscreen layer on by default, black, above the image", failures)
+        dlg.set_side("top")
+        check(dlg.chk_silk_default.GetValue(), "default colour box ticked", failures)
+        dlg.silk_colour.SetColour(wx.Colour(0, 0, 128))
+        dlg.on_silk_print(wx.PyCommandEvent(wx.wxEVT_COLOURPICKER_CHANGED))
+        check(not dlg.chk_silk_default.GetValue() and dlg.silk_print["top"]["color"] == "#000080",
+              "choosing a colour unticks the default", failures)
+        dlg.chk_silk_default.SetValue(True)
+        dlg.on_silk_default()
+        check(dlg.silk_print["top"]["color"] == "#000000", "default box restores black", failures)
 
     # --- top: move, corner resize (aspect kept), wheel zoom, rotate, numeric entry
     dlg.set_side("top")
@@ -88,6 +100,7 @@ def main():
         c.render_to_bitmap(900, 900).SaveFile(os.path.join(OUT, "editor_{}.png".format(side)), wx.BITMAP_TYPE_PNG)
     # silkscreen toggle: rendering differs when the board has silk on that face
     dlg.set_side("top")
+    dlg.set_silk_print("top", False)  # printed silkscreen is part of the image: always drawn
     with_silk = c.render_to_bitmap(300, 300).ConvertToImage().GetData()
     dlg.chk_silk["top"].SetValue(False)
     dlg.on_options(None)

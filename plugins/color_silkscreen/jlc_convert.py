@@ -150,11 +150,18 @@ def _hash_suffix(text):
     return int(hashlib.md5(text.encode("utf-8")).hexdigest()[-2:], 16) % 100
 
 
-def add_hash_aperture(content, rng=random, max_size=30000000):
-    """Append the EasyEDA fingerprint aperture (size encodes md5 of the file)."""
+def add_hash_aperture(content, rng=random, max_size=30000000, force=False):
+    """Append the EasyEDA fingerprint aperture (size encodes md5 of the file).
+
+    `force`: also fingerprint a Gerber that declares no aperture but draws
+    something (e.g. a copper layer made only of filled regions). TransJLC
+    leaves those unmarked; JLCPCB stopped applying the colour print when a
+    Gerber lacked the fingerprint (0.2.8)."""
     if len(content) > max_size:
         return content
     if not _AD_LINE.search(content):
+        if force and re.search(r"(?m)D0?[123]\*", content):
+            return _fingerprint_without_apertures(content, rng)
         return content
     used = set(int(n) for n in re.findall(r"(?m)(?:^[ \t]*|G54)D(\d{2,4})\*", content))
     cleaned = content
@@ -184,6 +191,18 @@ def add_hash_aperture(content, rng=random, max_size=30000000):
     return cleaned[:insert] + "%ADD{}C,{}*%\n".format(target, size) + cleaned[insert:]
 
 
+def _fingerprint_without_apertures(content, rng=random):
+    """Declare a (never used) fingerprint aperture %ADD10 right after the %MO / %LP block."""
+    m = None
+    for m in re.finditer(r"(?m)^%(?:FS|MO|LP)[^\n]*\n", content):
+        pass
+    insert = m.end() if m else 0
+    size = "0.{:02d}{:02d}".format(rng.randint(0, 99), _hash_suffix(content))
+    if size == "0.0000":
+        size = "0.0100"
+    return content[:insert] + "%ADD10C,{}*%\n".format(size) + content[insert:]
+
+
 def verify_hash_aperture(content):
     matches = list(_AD_LINE.finditer(content))
     if not matches:
@@ -203,7 +222,7 @@ def normalize_excellon(content):
 
 # --------------------------------------------------------------------------- directory conversion
 
-def convert_directory(gerber_dir, log=None, now=None, rng=random, app_version=EASYEDA_VERSION):
+def convert_directory(gerber_dir, log=None, now=None, rng=random, app_version=EASYEDA_VERSION, fingerprint_all=True):
     """Rewrite `gerber_dir` in place into the EasyEDA layout.
 
     Returns {layer_key: absolute path}. Unmatched files (drill maps, job files)
@@ -250,7 +269,7 @@ def convert_directory(gerber_dir, log=None, now=None, rng=random, app_version=EA
                 text = add_gerber_header(text, now, app_version)
                 if needs_g54:
                     text = add_missing_g54_prefix(text)
-                text = add_hash_aperture(text, rng)
+                text = add_hash_aperture(text, rng, force=fingerprint_all)
             with open(os.path.join(staging, jlc_name), "w", encoding="utf-8", newline="") as fh:
                 fh.write(text)
             if log:

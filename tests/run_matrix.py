@@ -28,7 +28,8 @@ CASES = [
     ("T1-bmp", "T1", "bad.bmp", None, [], "error", "E_IMAGE_FORMAT", [], {}),
     ("T1-missing", "T1", "nope.png", None, [], "error", "E_IMAGE_MISSING", [], {}),
     ("T2-both", "T2", "logo.png", "photo.jpg", [], "ok", None, [], {"mask_top": 4, "mask_bottom": 1}),
-    ("T2-transjlc", "T2", "logo.png", "photo.jpg", ["--colorProfile", "transjlc"], "ok", None, [], {}),
+    # legacy TransJLC markers are now rejected by JLCPCB ("outdated"): the pre-flight check must say so
+    ("T2-transjlc", "T2", "logo.png", "photo.jpg", ["--colorProfile", "transjlc"], "error", "E_PRECHECK", [], {}),
     ("T3-alpha", "T3", "alpha.png", None, [], "ok", None, [], {"bounds": [100, -110, 150, -80]}),
     ("T4-auxorigin", "T4", "logo.png", None, [], "ok", None, [], {"bounds": [-7.5, 0, 42.5, 30]}),
     ("T5-4layers", "T5", None, "photo.jpg", [], "ok", None, [],
@@ -103,6 +104,12 @@ def run_case(case):
                 expected = set(COLOR_FILES) | ({TOP} if top or "compose_top" in steps else set()) |                     ({BOTTOM} if bottom or "compose_bottom" in steps else set())
                 if not expected <= set(names):
                     problems.append("missing in zip: {}".format(sorted(expected - set(names))))
+                if any(k.startswith("compose_") for k in steps):
+                    if not steps.get("precheck", {}).get("ok"):
+                        problems.append("precheck failed")
+                    for name in ("preview_top.png", "preview_bottom.png"):
+                        if not os.path.exists(os.path.join(work, "production", name)):
+                            problems.append("missing " + name)
                 if "board_vs_gerber" in steps:
                     result["delta_mm"] = steps["board_vs_gerber"]["delta_mm"]
                 result["bounds_mm"] = steps["outline_bounds"]["bounds_mm"]

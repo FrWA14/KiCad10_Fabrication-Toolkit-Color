@@ -16,6 +16,7 @@ HINTS = {
     "E_PLACEMENT": "Corriger le placement (taille > 0, rotation 0/90/180/270) dans l'éditeur de placement.",
     "E_MASK_COVERED": "Des pastilles seraient couvertes d'encre couleur : vérifier les ouvertures de masque "
                       "(F/B.Mask) de ces pastilles et signaler le cas avec le log.",
+    "E_PRECHECK": "Le pré-contrôle du ZIP a échoué : voir color_silkscreen_report.json (étape precheck).",
     "E_INTERNAL": "Erreur inattendue ; joindre color_silkscreen.log au rapport de bug.",
 }
 

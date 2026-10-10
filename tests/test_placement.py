@@ -114,6 +114,26 @@ class PlacementTests(unittest.TestCase):
         calb = pl.compose(VIEW, "bottom", None, calibration=True)
         self.assertEqual(calb.getpixel((int(40 * PX), int(15 * PX)))[:3], (220, 0, 0))  # mirrored pad x = 50 - 10
 
+    def test_cut_pads_and_drills(self):
+        view = dict(VIEW, openings={"top": {"outlines": [[(9, 14.5), (11, 14.5), (11, 15.5), (9, 15.5)]], "holes": []},
+                                    "bottom": {"outlines": [], "holes": []}},
+                    drills=[{"x": 30, "y": 8, "w": 0.6, "h": 0.6, "angle": 0},
+                            {"x": 40, "y": 22, "w": 2.0, "h": 0.8, "angle": 90}])
+        p = {"image": self.logo, "cx": 25, "cy": 15, "w": 50, "h": 30, "rot": 0}
+        c = pl.compose(view, "top", p).getchannel("A")
+        self.assertEqual(c.getpixel((int(10 * PX), int(15 * PX))), 0)      # pad opening: no ink
+        self.assertEqual(c.getpixel((int(12 * PX), int(15 * PX))), 255)    # next to it: ink
+        self.assertEqual(c.getpixel((int(30 * PX), int(8 * PX))), 0)       # round hole
+        self.assertEqual(c.getpixel((int(40 * PX), int(22.8 * PX))), 0)    # vertical slot (rotated 90 deg)
+        self.assertEqual(c.getpixel((int(40.7 * PX), int(22 * PX))), 255)
+        # bottom face: holes mirrored (x' = 50 - x), pad opening of the top face not applied
+        cb = pl.compose(view, "bottom", p).getchannel("A")
+        self.assertEqual(cb.getpixel((int(20 * PX), int(8 * PX))), 0)
+        self.assertEqual(cb.getpixel((int(40 * PX), int(15 * PX))), 255)
+        # calibration pattern is never cut (crosshairs must show on the pads)
+        cal = pl.compose(view, "top", None, calibration=True)
+        self.assertGreater(cal.getchannel("A").getpixel((int(10 * PX), int(15 * PX))), 0)
+
     def test_save_composite_and_json(self):
         out = os.path.join(OUT, "placement_unit")
         shutil.rmtree(out, ignore_errors=True)

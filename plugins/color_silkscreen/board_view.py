@@ -65,6 +65,37 @@ def extract(board):
     silk = {side: [[local(p) for p in chain] for chain in _silk_polygons(board, layer)]
             for side, layer in (("top", pcbnew.F_SilkS), ("bottom", pcbnew.B_SilkS))}
 
+    # Exact solder-mask openings (pads, mask graphics, zones), already merged by KiCad.
+    openings = {}
+    for side, layer in (("top", pcbnew.F_Mask), ("bottom", pcbnew.B_Mask)):
+        polys = pcbnew.SHAPE_POLY_SET()
+        try:
+            board.ConvertBrdLayerToPolygonalContours(layer, polys)
+            polys.Simplify()
+        except Exception:
+            polys = pcbnew.SHAPE_POLY_SET()
+        outs, hls = [], []
+        for i in range(polys.OutlineCount()):
+            outs.append([local(p) for p in chain(polys.Outline(i))])
+            for j in range(polys.HoleCount(i)):
+                hls.append([local(p) for p in chain(polys.Hole(i, j))])
+        openings[side] = {"outlines": outs, "holes": hls}
+
+    # Every drilled hole goes through both faces: no ink can stay there.
+    drills = []
+    for pad in board.GetPads():
+        if not pad.HasHole():
+            continue
+        size = pad.GetDrillSize()
+        x, y = local((mm(pad.GetX()), mm(pad.GetY())))
+        angle = pad.GetOrientationDegrees() if hasattr(pad, "GetOrientationDegrees") else 0.0
+        drills.append({"x": x, "y": y, "w": round(mm(size.x), 4), "h": round(mm(size.y), 4), "angle": angle})
+    for track in board.GetTracks():
+        if track.GetClass() == "PCB_VIA":
+            x, y = local((mm(track.GetX()), mm(track.GetY())))
+            d = round(mm(track.GetDrillValue()), 4)
+            drills.append({"x": x, "y": y, "w": d, "h": d, "angle": 0.0})
+
     return {
         "width": round(width, 4), "height": round(height, 4),
         "origin_mm": (round(x0, 4), round(y0, 4)),
@@ -73,6 +104,8 @@ def extract(board):
         "pads": pads,
         "footprints": footprints,
         "silk": silk,
+        "openings": openings,
+        "drills": drills,
     }
 
 
@@ -123,6 +156,11 @@ def side_geometry(view, side):
     for fp in view["footprints"][side]:
         x = view_x(view, side, fp["x"] + (fp["w"] if side == "bottom" else 0))
         fps.append(dict(fp, x=x))
+    op = view.get("openings", {}).get(side, {"outlines": [], "holes": []})
+    drills = [dict(d, x=view_x(view, side, d["x"]), angle=(-d["angle"] if side == "bottom" else d["angle"]))
+              for d in view.get("drills", [])]
     return {"outlines": [pts(o) for o in view["outlines"]], "holes": [pts(h) for h in view["holes"]],
             "silk": [pts(c) for c in view.get("silk", {}).get(side, [])],
+            "openings": [pts(c) for c in op["outlines"]], "openings_holes": [pts(c) for c in op["holes"]],
+            "drills": drills,
             "pads": pads, "footprints": fps, "width": view["width"], "height": view["height"]}

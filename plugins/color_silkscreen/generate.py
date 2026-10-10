@@ -63,7 +63,8 @@ def generate_color_silkscreen(gerber_dir, top_image=None, bottom_image=None, rep
     if not top_image and not bottom_image:
         return []
 
-    layers, dropped = jlc_convert.convert_directory(gerber_dir, log, app_version=options.easyeda_version)
+    layers, dropped = jlc_convert.convert_directory(gerber_dir, log, app_version=options.easyeda_version,
+                                                    fingerprint_all=options.profile != "transjlc")
     report.step("jlc_convert", easyeda_version=options.easyeda_version, eda_version=options.eda_version, files=sorted(os.path.basename(p) for p in layers.values()), dropped=dropped)
     for side in options.blank_silk_sides:
         key = "F_SILK" if side == "top" else "B_SILK"

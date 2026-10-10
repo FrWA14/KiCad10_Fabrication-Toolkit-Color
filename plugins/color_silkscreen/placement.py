@@ -115,6 +115,9 @@ def compose(view, side, placement, dpi=DPI, silk=None, offset=None, calibration=
                 draw.polygon([((x + dx) * scale, (y + dy) * scale) for x, y in chain], fill=rgb + (255,))
     if calibration:
         _draw_calibration(canvas, geo, side, scale, dx, dy)
+    else:
+        # Boolean cut: no ink on bare copper (mask openings) nor on any drilled hole.
+        _cut_openings(canvas, geo, scale)
 
     mask = Image.new("L", (cw, ch), 0)
     draw = ImageDraw.Draw(mask)
@@ -166,6 +169,49 @@ def _draw_calibration(canvas, geo, side, scale, dx, dy):
     draw.line([P(ax, ay), P(ax + 12, ay)], fill=black, width=lw * 3)
     draw.polygon([P(ax + 12, ay - 1), P(ax + 14, ay), P(ax + 12, ay + 1)], fill=black)
     draw.text(P(ax + 15, ay - 1.8), "+X", fill=black, font=font)
+
+
+def openings_mask(geo, scale, size):
+    """L image, 255 where the face has bare copper (mask opening) or a drilled hole."""
+    import math
+    from PIL import Image, ImageDraw
+    m = Image.new("L", size, 0)
+    draw = ImageDraw.Draw(m)
+    for chain in geo.get("openings", []):
+        if len(chain) >= 3:
+            draw.polygon([(x * scale, y * scale) for x, y in chain], fill=255)
+    for chain in geo.get("openings_holes", []):
+        if len(chain) >= 3:
+            draw.polygon([(x * scale, y * scale) for x, y in chain], fill=0)
+    for d in geo.get("drills", []):
+        w, h = d["w"], d["h"]
+        if abs(w - h) < 1e-6:  # round hole
+            r = w / 2
+            draw.ellipse([(d["x"] - r) * scale, (d["y"] - r) * scale, (d["x"] + r) * scale, (d["y"] + r) * scale], fill=255)
+            continue
+        # oblong slot: stadium along its long axis, rotated with the pad
+        r = min(w, h) / 2
+        half = (max(w, h) - min(w, h)) / 2
+        base = 0.0 if w >= h else 90.0
+        a = math.radians(base - d["angle"])
+        pts = []
+        for k in range(24):
+            t = math.pi / 2 - math.pi * k / 23
+            pts.append((half + r * math.cos(t), r * math.sin(t)))
+        for k in range(24):
+            t = math.pi / 2 + math.pi * k / 23
+            pts.append((-half + r * math.cos(t), r * math.sin(t)))
+        draw.polygon([((d["x"] + x * math.cos(a) - y * math.sin(a)) * scale,
+                       (d["y"] + x * math.sin(a) + y * math.cos(a)) * scale) for x, y in pts], fill=255)
+    return m
+
+
+def _cut_openings(canvas, geo, scale):
+    from PIL import ImageChops, ImageOps
+    if not geo.get("openings") and not geo.get("drills"):
+        return
+    keep = ImageOps.invert(openings_mask(geo, scale, canvas.size))
+    canvas.putalpha(ImageChops.multiply(canvas.getchannel("A"), keep))
 
 
 def _paste_image(canvas, p, scale):

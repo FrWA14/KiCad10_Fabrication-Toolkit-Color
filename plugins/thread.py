@@ -208,10 +208,15 @@ class ProcessThread(Thread):
         self.archive_path = os.path.join(output_path, gerberArchiveName)
         if color_report is not None:
             self.record_archive(color_report)
+            checks = self.check_and_preview(color_report)
             self.finish_color_report(color_report)
-            if self.wx is not None and color_report.data["warnings"]:
-                wx.MessageBox("\n".join("{}: {}".format(w["code"], w["message"]) for w in color_report.data["warnings"]),
-                              "Fabrication Toolkit - Sérigraphie couleur", wx.OK | wx.ICON_WARNING)
+            if self.wx is not None:
+                from .export_viewer import show_export_viewer
+                wx.CallAfter(show_export_viewer, self.archive_path, getattr(self, "color_composites", {}), checks,
+                             color_report.data["warnings"])
+            elif checks is not None:
+                for c in checks:
+                    print("{} {} - {}".format("OK " if c["ok"] else "NOK", c["code"], c["message"]))
 
         if self.wx is None:
             self.progress(100)
@@ -284,6 +289,12 @@ class ProcessThread(Thread):
         from .color_silkscreen import board_view, placement as pl
 
         images = {"top": self.options.get(TOP_IMAGE_OPT) or None, "bottom": self.options.get(BOTTOM_IMAGE_OPT) or None}
+        self.color_composites = {}
+        for stale in ("top", "bottom"):  # never preview/encrypt a composite left by a previous export
+            for ext in ("png", "jpg"):
+                old = os.path.join(self.color_out_dir, "color_{}_composite.{}".format(stale, ext))
+                if os.path.exists(old):
+                    os.remove(old)
         placements = {"top": pl.normalize(self.options.get(TOP_PLACEMENT_OPT)),
                       "bottom": pl.normalize(self.options.get(BOTTOM_PLACEMENT_OPT))}
         silk = {"top": pl.normalize_silk(self.options.get(TOP_SILK_OPT)),
@@ -292,8 +303,10 @@ class ProcessThread(Thread):
                    "bottom": pl.normalize_offset(self.options.get(BOTTOM_OFFSET_OPT))}
         calibration = bool(self.options.get(COLOR_CALIBRATION_OPT))
         shifted = any(offsets[s] != (0.0, 0.0) and (images[s] or silk[s]) for s in ("top", "bottom"))
-        if not any(placements.values()) and not any(silk.values()) and not shifted and not calibration:
+        if not any(images.values()) and not any(placements.values()) and not any(silk.values()) and not calibration:
             return images
+        # Every face with artwork goes through the compositor: it clips to Edge.Cuts and
+        # cuts the image on bare copper and drilled holes (on top of the SVG clip).
         if calibration:
             report.warn({"code": "W_CALIBRATION",
                          "message": "Mire de calage : les images sont remplacées par la mire sur les deux faces."})
@@ -308,9 +321,19 @@ class ProcessThread(Thread):
                              "message": "Placement {} ignoré : il concerne {} et non {}.".format(
                                  side, os.path.basename(p["image"]), os.path.basename(images[side]))})
                 p = None
+            source = (p or {}).get("image") or images[side]
+            if source and not calibration:
+                # Validate the source picture itself (format, size, missing file) before composing.
+                from .color_silkscreen.image import load_image
+                checks = []
+                load_image(source, view["width"], view["height"], checks, self.options.get(COLOR_FIT_OPT) or "stretch")
+                ignore = {"W_IMAGE_LOW_DPI"} | ({"W_IMAGE_ASPECT", "W_IMAGE_PADDED"} if p else set())
+                for w in checks:
+                    if w["code"] not in ignore:
+                        report.warn(w)
             if calibration:
                 p = None
-            elif not p and images[side] and (silk[side] or offsets[side] != (0.0, 0.0)):
+            elif not p and images[side]:
                 # plain image + silkscreen: the image covers the outline box like before
                 from PIL import Image
                 with Image.open(images[side]) as im:
@@ -332,6 +355,7 @@ class ProcessThread(Thread):
                     dpi = pl.effective_dpi(p, im.size)
             canvas = pl.compose(view, side, p, silk=silk[side], offset=offsets[side], calibration=calibration)
             path, preview = pl.save_composite(canvas, self.color_out_dir, side)
+            self.color_composites[side] = preview
             report.step("compose_" + side, image=p["image"] if p else None, placement_mm=p,
                         source_dpi=round(dpi, 1) if dpi else None, silk=silk[side],
                         silk_shapes=len(view["silk"][side]), offset_mm=list(offsets[side]),
@@ -342,6 +366,33 @@ class ProcessThread(Thread):
             images[side] = path
         pl.save_placements(os.path.join(self.color_out_dir, "color_placement.json"), placements, view, silk)
         return images
+
+    def check_and_preview(self, report):
+        '''Pre-flight checks of the final ZIP + JLCPCB-style previews (production/preview_*.png).'''
+        from .color_silkscreen import export_preview, precheck
+        try:
+            files = export_preview.read_zip(self.archive_path)
+            from PIL import Image
+            composites = {s: Image.open(p) for s, p in getattr(self, "color_composites", {}).items()}
+            colour_sides = tuple(s for s in ("top", "bottom")
+                                 if any(n.endswith(".FCTS" if s == "top" else ".FCBS") for n in files)
+                                 or s in composites)
+            checks = precheck.run(files, os.path.getsize(self.archive_path), colour_sides,
+                                  self.silk_printed_sides(), composites)
+            errors, warnings = precheck.summary(checks)
+            report.step("precheck", ok=not errors, checks=checks)
+            for c in errors:
+                report.error(ColorSilkError("E_PRECHECK", "{} : {}".format(c["code"], c["message"]),
+                                            "Le ZIP risque d'être refusé ou sans couleur chez JLCPCB ; voir le rapport."))
+            if errors:
+                self.error = "pré-contrôle : " + "; ".join(c["code"] for c in errors)
+            out_dir = os.path.dirname(self.archive_path)
+            export_preview.render_zip(self.archive_path, getattr(self, "color_composites", {}), out_dir)
+            report.step("preview", files=["preview_top.png", "preview_bottom.png"])
+            return checks
+        except Exception as e:
+            report.warn({"code": "W_PREVIEW", "message": "Pré-contrôle / aperçu impossible : {}".format(e)})
+            return None
 
     def record_archive(self, report):
         import zipfile

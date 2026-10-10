@@ -250,7 +250,22 @@ def _stadium(start, end, width):
     return [to_svg(x, y) for x, y in _convex_hull(pts)]
 
 
+def polygons_mm(text):
+    """Every dark shape of a Gerber as a polygon in Gerber millimetres (Y up).
+    Used by the export preview; arcs and circles are sampled."""
+    if not text or not text.strip():
+        return []
+    items, _, _ = _shape_items(gerber.parse(text, "E_MASK_PARSE"))
+    return [[(x * UNIT, -y * UNIT) for x, y in poly] for _, poly in items]
+
+
 def _exact_paths(doc, warnings):
+    items, centres, unknown = _shape_items(doc)
+    return _finish_exact(items, centres, unknown, warnings)
+
+
+def _shape_items(doc):
+    """[(svg path d, polygon in SVG units)], flash centres, unknown aperture kinds."""
     items = []          # (svg path d, polygon in SVG units) - polygon used for overlap tests
     centres = []        # flash centres: every pad must stay open
     unknown = set()
@@ -299,6 +314,10 @@ def _exact_paths(doc, warnings):
             if poly:
                 items.append((_poly_path(poly), poly))
 
+    return items, centres, unknown
+
+
+def _finish_exact(items, centres, unknown, warnings):
     if unknown:
         warnings.append({"code": "W_MASK_APERTURE",
                          "message": "Ouvertures de masque ignorées (forme inconnue) : " + ", ".join(sorted(unknown))})

@@ -356,7 +356,11 @@ class PlacementDialog(wx.Dialog):
         self.silk_colour = wx.ColourPickerCtrl(self, colour=wx.Colour(0, 0, 0))
         self.silk_colour.SetToolTip("Couleur de la sérigraphie imprimée")
         printing.Add(self.chk_print_silk, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
-        printing.Add(wx.StaticText(self, label="Couleur :"), 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
+        self.chk_silk_default = wx.CheckBox(self, label="Couleur par défaut (noir)")
+        self.chk_silk_default.SetToolTip("Coché : sérigraphie imprimée en noir. Choisir une couleur le décoche.")
+        self.chk_silk_default.Bind(wx.EVT_CHECKBOX, self.on_silk_default)
+        printing.Add(self.chk_silk_default, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
+        printing.Add(wx.StaticText(self, label="ou couleur :"), 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
         printing.Add(self.silk_colour, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 16)
         self.chk_keep_classic = wx.CheckBox(self, label="Garder aussi la sérigraphie classique (noire)")
         self.chk_keep_classic.SetToolTip("Décoché : le Gerber de sérigraphie de cette face est vidé, sinon JLCPCB l'imprime en "
@@ -432,12 +436,21 @@ class PlacementDialog(wx.Dialog):
         self.set_side("top")
 
     # ------------------------------------------------------------------ actions
-    def on_silk_print(self, _=None):
+    def on_silk_default(self, _=None):
+        if self.chk_silk_default.GetValue():
+            self.silk_colour.SetColour(wx.Colour(0, 0, 0))
+        self.on_silk_print()
+
+    def on_silk_print(self, event=None):
+        if event is not None and event.GetEventType() == wx.wxEVT_COLOURPICKER_CHANGED:
+            self.chk_silk_default.SetValue(self.silk_colour.GetColour() == wx.Colour(0, 0, 0))
         state = self.silk_print[self.canvas.side]
+        state["touched"] = True
         state["enabled"] = self.chk_print_silk.GetValue()
         state["color"] = self.silk_colour.GetColour().GetAsString(wx.C2S_HTML_SYNTAX)
         state["keep_classic"] = self.chk_keep_classic.GetValue()
         self.silk_colour.Enable(state["enabled"])
+        self.chk_silk_default.Enable(state["enabled"])
         self.chk_keep_classic.Enable(state["enabled"])
         self.show_offset()
         self.canvas.silk_print = {s: (v if v["enabled"] else None) for s, v in self.silk_print.items()}
@@ -456,10 +469,13 @@ class PlacementDialog(wx.Dialog):
             ctrl.ChangeValue("{:.2f}".format(v))
 
     def set_silk_print(self, side, enabled, color="#000000"):
-        self.silk_print[side] = {"enabled": bool(enabled), "color": color, "keep_classic": False}
+        self.silk_print[side] = {"enabled": bool(enabled), "color": color, "keep_classic": False, "touched": True}
         if side == self.canvas.side:
             self.chk_print_silk.SetValue(bool(enabled))
             self.silk_colour.SetColour(wx.Colour(color))
+            self.chk_silk_default.SetValue(color.upper() == "#000000")
+            for ctrl in (self.silk_colour, self.chk_silk_default, self.chk_keep_classic):
+                ctrl.Enable(bool(enabled))
         self.canvas.silk_print = {s: (v if v["enabled"] else None) for s, v in self.silk_print.items()}
         self.canvas.Refresh()
 
@@ -472,6 +488,8 @@ class PlacementDialog(wx.Dialog):
         self.chk_print_silk.SetValue(state["enabled"])
         self.chk_keep_classic.SetValue(bool(state.get("keep_classic")))
         self.chk_keep_classic.Enable(state["enabled"])
+        self.chk_silk_default.SetValue(state["color"].upper() == "#000000")
+        self.chk_silk_default.Enable(state["enabled"])
         self.silk_colour.SetColour(wx.Colour(state["color"]))
         self.silk_colour.Enable(state["enabled"])
         self.canvas.silk_print = {s: (v if v["enabled"] else None) for s, v in self.silk_print.items()}
@@ -490,6 +508,10 @@ class PlacementDialog(wx.Dialog):
             return
         px = (img.GetWidth(), img.GetHeight())
         self.placements[side] = dict(pl.fit(self.view, px, 0, "contain"), image=path)
+        state = self.silk_print[side]
+        if not state.get("touched") and not state["enabled"] and self.view.get("silk", {}).get(side):
+            # Default layer order: silkscreen printed in black above the picture.
+            self.set_silk_print(side, True, "#000000")
         self.canvas.Refresh()
         self.sync_fields()
 

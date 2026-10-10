@@ -34,7 +34,7 @@ python tools/build_pcm.py
 ```
 
 Puis dans KiCad 10 : *Gestionnaire de plugins et de contenus → Installer depuis un fichier…* →
-`dist/fabrication-toolkit-color-0.2.9.zip`.
+`dist/fabrication-toolkit-color-0.3.0.zip`.
 
 **Copie de développement** : copier (ou lier) le dossier `plugins/` dans
 `%USERPROFILE%\Documents\KiCad\10.0\scripting\plugins\fabrication_toolkit_color\`, puis *Outils → Plugins externes →
@@ -90,6 +90,35 @@ fermé Edge.Cuts (et des découpes internes) est retiré**. Cette image découp�
 `.FCTS` / `.FCBS` du ZIP, avec sa position. Copies lisibles dans `production/` :
 `color_top_composite.png`, `color_bottom_composite.png` (ou `.jpg` au-delà de 3 Mo) et `color_placement.json`.
 Ces fichiers restent **hors** du ZIP envoyé à JLCPCB, pour ne pas perturber leur contrôle des fichiers.
+
+### Calques de l'impression couleur (0.3.0)
+
+Pour chaque face, l'image envoyée à JLCPCB est construite en calques, dans cet ordre :
+
+1. **Image** placée dans l'éditeur (ou étirée sur le contour si elle n'est pas placée).
+2. **Sérigraphie** de la face, au-dessus de l'image. Activée par défaut, en **noir**, dès qu'une image est chargée
+   (case « Couleur par défaut (noir) ») ; choisir une couleur décoche cette case. Le Gerber de sérigraphie classique
+   est alors vidé, avec son empreinte EasyEDA.
+3. **Découpe booléenne** : l'image est retirée sur toutes les ouvertures du masque (pastilles à souder, pastilles
+   thermiques, anneaux des trous de fixation) et sur tous les perçages (pastilles, vias, trous oblongs). Contours
+   exacts fournis par KiCad.
+4. **Contour** : tout ce qui sort d'Edge.Cuts (et des découpes internes) est retiré.
+
+Le SVG chiffré garde en plus sa propre découpe des ouvertures (double protection).
+
+### Aperçu de l'export et pré-contrôle (0.3.0)
+
+Après chaque génération, une fenêtre **« Aperçu de l'export JLCPCB »** s'ouvre (et le bouton « Aperçu du dernier
+export » la rouvre). Elle reconstruit chaque face **à partir des fichiers du ZIP** : vernis blanc, image couleur
+(découpée comme chez JLCPCB), sérigraphie Gerber, cuivre nu, perçages, contour. Calques à cocher, zoom à la molette,
+déplacement en glissant. Les mêmes images sont écrites dans `production/preview_top.png` et `preview_bottom.png`.
+
+Dessous, le **pré-contrôle** vérifie ce que JLCPCB a déjà refusé : couches présentes, en-tête et version EasyEDA
+(≥ 3.2.135), empreinte EasyEDA valide sur chaque Gerber, fichiers couleur présents, sérigraphie classique vidée
+quand elle est imprimée en couleur, proportions de l'image, taille du ZIP. Une erreur de pré-contrôle est signalée
+(`E_PRECHECK`) mais le ZIP reste disponible.
+
+Limite : l'aperçu montre le contenu des fichiers, pas l'acceptation par JLCPCB (option couleur, contrôles internes).
 
 ### Mire de calage
 

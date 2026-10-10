@@ -105,6 +105,8 @@ class KiCadToJLCForm(wx.Frame):
         self.mPlacementButton = wx.Button(self, label="Placer / redimensionner les images (vues dessus et dessous)…")
         self.mPlacementButton.Bind(wx.EVT_BUTTON, self.onPlacementButtonClick)
         self.mPlacementLabel = wx.StaticText(self, label="")
+        self.mPreviewButton = wx.Button(self, label="Aperçu du dernier export (façon Gerber Viewer JLCPCB)…")
+        self.mPreviewButton.Bind(wx.EVT_BUTTON, self.onPreviewButtonClick)
         self.mCalibrationCheckbox = wx.CheckBox(self, label="Mire de calage à la place des images (test d'alignement JLCPCB)")
         self.mCalibrationCheckbox.SetValue(bool(userOptions[COLOR_CALIBRATION_OPT]))
         self.mCalibrationCheckbox.SetToolTip("Imprime des croix centrées sur chaque pastille des deux faces : dans le Gerber "
@@ -144,6 +146,7 @@ class KiCadToJLCForm(wx.Frame):
         boxSizer.Add(self.mPlacementButton, 0, wx.ALL | wx.EXPAND, 5)
         boxSizer.Add(self.mPlacementLabel, 0, wx.LEFT | wx.RIGHT, 5)
         boxSizer.Add(self.mCalibrationCheckbox, 0, wx.ALL, 5)
+        boxSizer.Add(self.mPreviewButton, 0, wx.ALL | wx.EXPAND, 5)
         boxSizer.Add(self.mGaugeStatus, 0, wx.ALL, 5)
         boxSizer.Add(self.mGenerateButton, 0, wx.ALL, 5)
 
@@ -203,7 +206,8 @@ class KiCadToJLCForm(wx.Frame):
         self.mOpenBrowserCheckbox.Hide()
         self.mBackupCheckbox.Hide()
         for control in (self.mColorLabel, self.mTopImageLabel, self.mTopImagePicker, self.mBottomImageLabel,
-                        self.mBottomImagePicker, self.mColorFitCheckbox, self.mPlacementButton, self.mPlacementLabel, self.mCalibrationCheckbox):
+                        self.mBottomImagePicker, self.mColorFitCheckbox, self.mPlacementButton, self.mPlacementLabel, self.mCalibrationCheckbox,
+                        self.mPreviewButton):
             control.Hide()
         self.mGenerateButton.Hide()
         self.mGaugeStatus.Show()
@@ -213,6 +217,12 @@ class KiCadToJLCForm(wx.Frame):
 
         StatusEvent.invoke(self, self.updateDisplay)
         ProcessThread(self, options, openBrowser=options[OPEN_BROWSER_OPT])
+
+    def onPreviewButtonClick(self, event):
+        from .export_viewer import open_last_export
+        from .config import outputFolder
+        board_dir = os.path.dirname(pcbnew.GetBoard().GetFileName())
+        open_last_export(os.path.join(board_dir, outputFolder))
 
     def placementFor(self, side, image):
         '''Placement only applies to the image it was made for.'''
@@ -298,10 +308,12 @@ class Plugin(pcbnew.ActionPlugin):
 
 RELOAD_ORDER = [
     "version", "color_silkscreen.errors", "color_silkscreen.numfmt", "color_silkscreen.report",
-    "color_silkscreen.gerber", "color_silkscreen.outline", "color_silkscreen.mask", "color_silkscreen.svg_builder",
+    "color_silkscreen.gerber", "color_silkscreen.outline", "color_silkscreen.union", "color_silkscreen.mask",
+    "color_silkscreen.svg_builder",
     "color_silkscreen.crypto", "color_silkscreen.marker", "color_silkscreen.jlc_convert", "color_silkscreen.image",
-    "color_silkscreen.board_view", "color_silkscreen.placement", "color_silkscreen.generate", "color_silkscreen",
-    "options", "config", "utils", "events", "process", "thread", "placement_dialog", "plugin",
+    "color_silkscreen.board_view", "color_silkscreen.placement", "color_silkscreen.generate",
+    "color_silkscreen.export_preview", "color_silkscreen.precheck", "color_silkscreen",
+    "options", "config", "utils", "events", "process", "export_viewer", "thread", "placement_dialog", "plugin",
 ]
 
 
