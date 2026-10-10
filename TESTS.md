@@ -123,6 +123,13 @@ Le dossier `svg/` contient les SVG en clair (option `--debugSvg`). On peut les o
     Désormais, le Gerber de sérigraphie d'une face imprimée en couleur est remplacé par un Gerber vide
     (en-tête EasyEDA, aucune ouverture, aucun tracé).
 
+13. **Deuxième mesure du décalage (10 octobre 2026, face dessous, `back.png`).** Repères physiques sur la capture
+    JLCPCB : les 9 vias thermiques du RP2350 et les 3 pastilles de J2 ; échelle prise sur les étiquettes de l'image.
+    Écart des étiquettes 3V3/5V : X +0,32 à +0,44 mm, Y +0,05 à +0,14 mm, soit environ **(+0,35 ; +0,10) mm**,
+    cohérent avec la mesure 10. Correction appliquée à la carte de l'utilisateur : `BOTTOM_COLOR_OFFSET = [-0.35, -0.1]`
+    (fichier d'options de la carte, sauvegarde `.bak-avant-correction`). À confirmer dans le Gerber Viewer
+    (`out/jlc_tests/RP2350_correction_dessous.zip`), puis sur une carte fabriquée, avant d'en faire une valeur par défaut.
+
 ## Validation manuelle chez JLCPCB (à faire par l'utilisateur)
 
 Procédure : README, section « Valider chez JLCPCB ». Reporter ici les messages exacts.
