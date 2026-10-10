@@ -368,8 +368,11 @@ class GenerateTests(unittest.TestCase):
         work, _, report = self.run_generate("gen_blank_silk", blank_silk_sides=("top",))
         gto = read(os.path.join(work, "Gerber_TopSilkscreenLayer.GTO"))
         self.assertTrue(gto.startswith("G04 EasyEDA Pro v"))
-        self.assertNotIn("%ADD", gto)          # no aperture, nothing drawn
-        self.assertNotIn("D01*", gto)
+        self.assertEqual(len(re.findall(r"(?m)^%ADD", gto)), 1)   # only the EasyEDA fingerprint aperture
+        self.assertTrue(jlc_convert.verify_hash_aperture(gto))
+        self.assertNotIn("D01*", gto)                              # nothing drawn
+        self.assertNotIn("D03*", gto)
+        self.assertNotRegex(gto, r"(?m)^(G54)?D\d+\*")
         self.assertNotIn("printed in the colour image", read(os.path.join(work, "Gerber_BottomSilkscreenLayer.GBO")))
         self.assertIn("I_SILK_GERBER_BLANKED", [w["code"] for w in report.data["warnings"]])
         work2, _, _ = self.run_generate("gen_keep_silk")

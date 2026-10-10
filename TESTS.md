@@ -130,6 +130,13 @@ Le dossier `svg/` contient les SVG en clair (option `--debugSvg`). On peut les o
     (fichier d'options de la carte, sauvegarde `.bak-avant-correction`). À confirmer dans le Gerber Viewer
     (`out/jlc_tests/RP2350_correction_dessous.zip`), puis sur une carte fabriquée, avant d'en faire une valeur par défaut.
 
+14. **Régression 0.2.8 : plus d'image chez JLCPCB (10 octobre 2026, corrigé en 0.2.9).** Le ZIP contenait bien les
+    fichiers couleur, mais le Gerber de sérigraphie vidé en 0.2.8 n'avait **aucune ouverture**, donc pas d'empreinte
+    EasyEDA (ouverture « hash »), contrairement à tous les autres Gerbers. Cause la plus probable du refus de la
+    couleur. En 0.2.9, le Gerber vidé contient l'empreinte (déclarée, jamais utilisée : rien n'est imprimé) et
+    `verify_hash_aperture` la valide. Option de repli « Garder aussi la sérigraphie classique » (`--keepClassicSilk`) =
+    comportement 0.2.7. ZIP de test : `out/jlc_tests/RP2350_029_A.zip` (défaut) et `RP2350_029_B.zip` (repli).
+
 ## Validation manuelle chez JLCPCB (à faire par l'utilisateur)
 
 Procédure : README, section « Valider chez JLCPCB ». Reporter ici les messages exacts.

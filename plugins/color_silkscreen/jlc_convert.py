@@ -94,15 +94,28 @@ def add_gerber_header(content, now=None, app_version=EASYEDA_VERSION):
     return header + content.replace("\r\n", "\n")
 
 
-def write_blank_silkscreen(path, side, app_version=EASYEDA_VERSION, now=None):
-    """Replace a conventional silkscreen Gerber by an empty one (no aperture, no draw).
+def write_blank_silkscreen(path, side, app_version=EASYEDA_VERSION, now=None, rng=random):
+    """Replace a conventional silkscreen Gerber by one that draws nothing.
 
     Used when the silkscreen is printed in colour: with a white solder mask JLCPCB
-    prints the conventional silkscreen in black, which would cover the colour print."""
+    prints the conventional silkscreen in black, which would cover the colour print.
+    Like every other Gerber of the set it keeps the EasyEDA header and fingerprint
+    aperture (declared, never used): 0.2.8 omitted it and JLCPCB stopped applying
+    the colour print."""
     body = ("G04 Silkscreen {} printed in the colour image (Fabrication Toolkit Color)*\n"
-            "%FSLAX46Y46*%\n%MOMM*%\n%LPD*%\nM02*\n").format("top" if side == "top" else "bottom")
+            "%FSLAX46Y46*%\n%MOMM*%\n%LPD*%\nG04 APERTURE LIST*\n%ADD10C,0.100000*%\nG04 APERTURE END LIST*\nM02*\n"
+            ).format("top" if side == "top" else "bottom")
+    text = add_gerber_header(body, now, app_version)
+    # The placeholder aperture only marks where the fingerprint goes; the hash is
+    # computed without any aperture line, exactly like add_hash_aperture does.
+    cleaned = text.replace("%ADD10C,0.100000*%\n", "")
+    insert = cleaned.index("G04 APERTURE END LIST*")
+    size = "0.{:02d}{:02d}".format(rng.randint(0, 99), _hash_suffix(cleaned))
+    if size == "0.0000":
+        size = "0.0100"
+    text = cleaned[:insert] + "%ADD10C,{}*%\n".format(size) + cleaned[insert:]
     with open(path, "w", encoding="utf-8", newline="") as fh:
-        fh.write(add_gerber_header(body, now, app_version))
+        fh.write(text)
 
 
 _APERTURE_SELECT = re.compile(r"^(\s*)(D\d{2,4}\*)")

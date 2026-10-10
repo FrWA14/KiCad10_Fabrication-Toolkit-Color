@@ -41,7 +41,10 @@ def normalize_silk(silk):
     color = str(silk.get("color") or "#000000").strip()
     if not re.fullmatch(r"#[0-9a-fA-F]{6}", color):
         raise ColorSilkError("E_PLACEMENT", "Couleur de sérigraphie invalide : {} (format #RRGGBB).".format(color))
-    return {"enabled": True, "color": color.upper()}
+    out = {"enabled": True, "color": color.upper()}
+    if silk.get("keep_classic"):
+        out["keep_classic"] = True  # keep the conventional (black) silkscreen Gerber as well
+    return out
 
 
 def rotated_size(px_w, px_h, rot):

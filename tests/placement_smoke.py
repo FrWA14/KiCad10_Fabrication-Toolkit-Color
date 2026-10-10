@@ -106,6 +106,11 @@ def main():
         with open(os.path.join(OUT, "composite_silk_only_small.png"), "wb") as fh:
             fh.write(pl.preview_bytes(canvas, 900))
 
+    dlg.chk_keep_classic.SetValue(True)
+    dlg.on_silk_print()
+    check(dlg.result_silk()["top"].get("keep_classic") is True, "keep classic silkscreen option", failures)
+    dlg.chk_keep_classic.SetValue(False)
+    dlg.on_silk_print()
     dlg.set_side("bottom")
     dlg.offset_fields[0].ChangeValue("-0,3")
     dlg.offset_fields[1].ChangeValue("0.05")

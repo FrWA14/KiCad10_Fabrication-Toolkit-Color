@@ -34,7 +34,7 @@ python tools/build_pcm.py
 ```
 
 Puis dans KiCad 10 : *Gestionnaire de plugins et de contenus → Installer depuis un fichier…* →
-`dist/fabrication-toolkit-color-0.2.8.zip`.
+`dist/fabrication-toolkit-color-0.2.9.zip`.
 
 **Copie de développement** : copier (ou lier) le dossier `plugins/` dans
 `%USERPROFILE%\Documents\KiCad\10.0\scripting\plugins\fabrication_toolkit_color\`, puis *Outils → Plugins externes →
@@ -72,7 +72,7 @@ déposée), composants de la face en gris, contour Edge.Cuts en vert.
   **Rotation 90°**, **Retirer**. Champs Centre X/Y, Largeur, Hauteur en mm, et résolution effective (DPI, en rouge
   sous 150).
 - **Aperçu découpé au contour** : montre déjà ce qui restera.
-- **Correction d'impression X / Y (mm)**, par face : décale toute l'impression couleur de la face (image et sérigraphie
+- **Correction d'impression de cette face, X / Y (mm)** (ligne sous la couleur de sérigraphie), par face : décale toute l'impression couleur de la face (image et sérigraphie
   imprimée) pour compenser un écart mesuré chez JLCPCB. Repère de la vue affichée : X vers la droite, Y vers le bas.
   L'aperçu reste à la position voulue ; seul l'export est décalé.
 - **Imprimer la sérigraphie de cette face dans l'image couleur** + **Couleur** : avec le procédé couleur (PCB blanc,
@@ -80,9 +80,9 @@ déposée), composants de la face en gris, contour Edge.Cuts en vert.
   B.Silkscreen (vue de dessous) **dans l'image**, au-dessus de la photo, dans la couleur choisie. Elle fonctionne aussi
   **sans image** sur la face : seule la sérigraphie est alors imprimée en couleur. Réglage par face, mémorisé avec la
   carte.
-  Le Gerber de sérigraphie classique de cette face est alors **vidé** dans le ZIP : sur un PCB blanc, JLCPCB
+  Le Gerber de sérigraphie classique de cette face est alors **vidé** dans le ZIP (il garde l'empreinte EasyEDA) : sur un PCB blanc, JLCPCB
   l'imprimerait sinon en noir par-dessus la couleur. Sans cette option, la sérigraphie classique reste imprimée
-  (en noir) au-dessus de l'image.
+  (en noir) au-dessus de l'image. La case **« Garder aussi la sérigraphie classique (noire) »** conserve ce Gerber (comportement de la 0.2.7).
 - **Sérigraphie : F.Silkscreen / B.Silkscreen** : la sérigraphie de la face affichée en noir sur le blanc (textes, logos, contours), au-dessus de l'image ; celle de l'autre face en gris léger, en transparence. Décocher pour voir l'image seule.
 
 À la génération, chaque image placée est rendue à 1200 DPI sur toute la carte, puis **tout ce qui sort du contour
@@ -114,6 +114,7 @@ pastilles des quatre coins :
 | `--colorFit stretch\|contain` | déformer l'image au format de la carte (défaut) ou ajouter des marges |
 | `--colorProfile default\|transjlc` | `transjlc` reproduit la sortie de TransJLC 0.4.0, bugs compris (voir TESTS.md) |
 | `--report PATH`, `--log PATH` | rapport JSON et log (défaut : dans `production/`) |
+| `--keepClassicSilk` | avec `--top/bottomSilkColor` : garder aussi le Gerber de sérigraphie classique |
 | `--topSilkColor`, `--bottomSilkColor` | `#RRGGBB` : imprime F/B.Silkscreen dans l'image couleur de cette face (même sans image) |
 | `--topOffset DX,DY`, `--bottomOffset=DX,DY` | correction d'impression en mm (valeur négative : écrire `--bottomOffset=-0.3,0`) |
 | `--calibration` | mire de calage sur les deux faces à la place des images |

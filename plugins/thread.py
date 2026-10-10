@@ -276,7 +276,7 @@ class ProcessThread(Thread):
         if self.options.get(COLOR_CALIBRATION_OPT):
             return ()
         return tuple(side for side, key in (("top", TOP_SILK_OPT), ("bottom", BOTTOM_SILK_OPT))
-                     if (self.options.get(key) or {}).get("enabled"))
+                     if (self.options.get(key) or {}).get("enabled") and not (self.options.get(key) or {}).get("keep_classic"))
 
     def compose_placed_images(self, report):
         '''Placed images and/or silkscreen-as-image -> board-sized 1200 DPI composites

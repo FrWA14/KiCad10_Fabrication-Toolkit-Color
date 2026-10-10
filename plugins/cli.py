@@ -43,6 +43,7 @@ if __name__ == '__main__':
     parser.add_argument("--topOffset",          type=str, help="Printing correction dx,dy in mm for the top face (view frame)", metavar="DX,DY")
     parser.add_argument("--bottomOffset",       type=str, help="Printing correction dx,dy in mm for the bottom face (seen from below); negative values: --bottomOffset=-0.3,0", metavar="DX,DY")
     parser.add_argument("--calibration",        action="store_true", help="Print the registration test pattern on both faces instead of the images")
+    parser.add_argument("--keepClassicSilk",    action="store_true", help="With --top/bottomSilkColor: keep the conventional silkscreen Gerber too (0.2.7 behaviour)")
     parser.add_argument("--placement",          type=str, help="Placement JSON from the editor (color_placement.json): position/size per face", metavar="FILE")
     parser.add_argument("--edaVersion",         type=str, help="eda-version written in the colour SVGs (default 2.4(2026-05-08))", metavar="V")
     parser.add_argument("--easyedaVersion",     type=str, help="EasyEDA Pro version in the Gerber headers (default 3.2.148)", metavar="V")
@@ -82,8 +83,8 @@ if __name__ == '__main__':
     options[TOP_OFFSET_OPT] = _offset(args.topOffset)
     options[BOTTOM_OFFSET_OPT] = _offset(args.bottomOffset)
     options[COLOR_CALIBRATION_OPT] = args.calibration
-    options[TOP_SILK_OPT] = {"enabled": True, "color": args.topSilkColor} if args.topSilkColor else None
-    options[BOTTOM_SILK_OPT] = {"enabled": True, "color": args.bottomSilkColor} if args.bottomSilkColor else None
+    options[TOP_SILK_OPT] = {"enabled": True, "color": args.topSilkColor, "keep_classic": args.keepClassicSilk} if args.topSilkColor else None
+    options[BOTTOM_SILK_OPT] = {"enabled": True, "color": args.bottomSilkColor, "keep_classic": args.keepClassicSilk} if args.bottomSilkColor else None
     if args.placement:
         from .color_silkscreen.placement import load_placements
         placements = load_placements(args.placement)

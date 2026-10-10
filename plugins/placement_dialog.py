@@ -358,15 +358,25 @@ class PlacementDialog(wx.Dialog):
         printing.Add(self.chk_print_silk, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
         printing.Add(wx.StaticText(self, label="Couleur :"), 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
         printing.Add(self.silk_colour, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 16)
-        printing.Add(wx.StaticText(self, label="Correction d'impression X / Y (mm) :"), 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 4)
+        self.chk_keep_classic = wx.CheckBox(self, label="Garder aussi la sérigraphie classique (noire)")
+        self.chk_keep_classic.SetToolTip("Décoché : le Gerber de sérigraphie de cette face est vidé, sinon JLCPCB l'imprime en "
+                                         "noir par-dessus la couleur. Coché : comportement de la 0.2.7.")
+        self.chk_keep_classic.Bind(wx.EVT_CHECKBOX, self.on_silk_print)
+        printing.Add(self.chk_keep_classic, 0, wx.ALIGN_CENTER_VERTICAL)
+
+        offset_row = wx.BoxSizer(wx.HORIZONTAL)
+        offset_row.Add(wx.StaticText(self, label="Correction d'impression de cette face (fichier JLCPCB uniquement, "
+                                                 "l'aperçu ne bouge pas) :"), 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
         self.offset_fields = []
-        for _ in range(2):
-            ctrl = wx.TextCtrl(self, size=wx.Size(55, -1), style=wx.TE_PROCESS_ENTER)
-            ctrl.SetToolTip("Décale toute l'impression couleur de cette face pour compenser un écart mesuré avec la mire "
-                            "de calage (vue de la face, X vers la droite, Y vers le bas). L'aperçu reste à la position voulue.")
+        for axis in ("X", "Y"):
+            offset_row.Add(wx.StaticText(self, label=axis + " :"), 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 3)
+            ctrl = wx.TextCtrl(self, size=wx.Size(60, -1), style=wx.TE_PROCESS_ENTER)
+            ctrl.SetToolTip("Décale toute l'impression couleur de cette face dans le fichier envoyé à JLCPCB, pour compenser "
+                            "un écart mesuré (vue de la face, X vers la droite, Y vers le bas). L'aperçu reste à la position voulue.")
             ctrl.Bind(wx.EVT_TEXT_ENTER, self.on_offset)
             ctrl.Bind(wx.EVT_KILL_FOCUS, lambda e: (self.on_offset(e), e.Skip()))
-            printing.Add(ctrl, 0, wx.RIGHT, 4)
+            offset_row.Add(ctrl, 0, wx.RIGHT, 3)
+            offset_row.Add(wx.StaticText(self, label="mm"), 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 14)
             self.offset_fields.append(ctrl)
         self.chk_print_silk.Bind(wx.EVT_CHECKBOX, self.on_silk_print)
         self.silk_colour.Bind(wx.EVT_COLOURPICKER_CHANGED, self.on_silk_print)
@@ -413,6 +423,7 @@ class PlacementDialog(wx.Dialog):
         s.Add(opts, 0, wx.ALL, 6)
         s.Add(layers, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
         s.Add(printing, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
+        s.Add(offset_row, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
         s.Add(hint, 0, wx.LEFT | wx.RIGHT, 6)
         s.Add(bottom, 0, wx.ALL | wx.ALIGN_RIGHT, 6)
         self.SetSizerAndFit(s)
@@ -425,7 +436,9 @@ class PlacementDialog(wx.Dialog):
         state = self.silk_print[self.canvas.side]
         state["enabled"] = self.chk_print_silk.GetValue()
         state["color"] = self.silk_colour.GetColour().GetAsString(wx.C2S_HTML_SYNTAX)
+        state["keep_classic"] = self.chk_keep_classic.GetValue()
         self.silk_colour.Enable(state["enabled"])
+        self.chk_keep_classic.Enable(state["enabled"])
         self.show_offset()
         self.canvas.silk_print = {s: (v if v["enabled"] else None) for s, v in self.silk_print.items()}
         self.canvas.Refresh()
@@ -443,7 +456,7 @@ class PlacementDialog(wx.Dialog):
             ctrl.ChangeValue("{:.2f}".format(v))
 
     def set_silk_print(self, side, enabled, color="#000000"):
-        self.silk_print[side] = {"enabled": bool(enabled), "color": color}
+        self.silk_print[side] = {"enabled": bool(enabled), "color": color, "keep_classic": False}
         if side == self.canvas.side:
             self.chk_print_silk.SetValue(bool(enabled))
             self.silk_colour.SetColour(wx.Colour(color))
@@ -457,6 +470,8 @@ class PlacementDialog(wx.Dialog):
         self.chk_print_silk.SetLabel("Imprimer la sérigraphie {} dans l'image couleur".format(
             "F.Silkscreen" if side == "top" else "B.Silkscreen"))
         self.chk_print_silk.SetValue(state["enabled"])
+        self.chk_keep_classic.SetValue(bool(state.get("keep_classic")))
+        self.chk_keep_classic.Enable(state["enabled"])
         self.silk_colour.SetColour(wx.Colour(state["color"]))
         self.silk_colour.Enable(state["enabled"])
         self.canvas.silk_print = {s: (v if v["enabled"] else None) for s, v in self.silk_print.items()}
