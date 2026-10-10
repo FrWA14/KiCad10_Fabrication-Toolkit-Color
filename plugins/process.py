@@ -1,3 +1,4 @@
+# Modified 2026 by Fabrication Toolkit Color: CPL limited to BOM parts (see NOTICE).
 # For better annotation.
 from __future__ import annotations
 
@@ -219,7 +220,14 @@ class ProcessManager:
                       or getattr(footprint, 'IsDNP', bool)())
             skip_dnp = exclude_dnp and is_dnp
 
-            if not (footprint.GetAttributes() & pcbnew.FP_EXCLUDE_FROM_POS_FILES)  and not is_dnp:
+            # Fabrication Toolkit Color: the CPL only lists parts that are also in the BOM.
+            # A footprint excluded from the BOM (mounting hole, logo, test point...) or
+            # "board only" has nothing to place; assemblers reject CPL rows without a BOM line.
+            attributes = footprint.GetAttributes()
+            not_placed = (attributes & pcbnew.FP_EXCLUDE_FROM_POS_FILES
+                          or attributes & pcbnew.FP_EXCLUDE_FROM_BOM
+                          or attributes & getattr(pcbnew, 'FP_BOARD_ONLY', 0))
+            if not not_placed and not is_dnp:
                 # append unique ID if duplicate footprint designator
                 unique_id = ""
                 if footprint_designators[footprint.GetReference().upper()] > 1:

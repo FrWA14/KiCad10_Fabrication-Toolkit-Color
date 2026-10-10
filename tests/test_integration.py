@@ -45,6 +45,22 @@ class Integration(unittest.TestCase):
         failures = [r for r in map(run_matrix.run_case, run_matrix.CASES) if not r["pass"]]
         self.assertEqual(failures, [])
 
+    def test_cpl_only_lists_bom_parts(self):
+        """A mounting hole excluded from the BOM but not from position files must not be in the CPL."""
+        work = os.path.join(OUT, "cpl_T8")
+        shutil.rmtree(work, ignore_errors=True)
+        os.makedirs(work)
+        path = os.path.join(work, "T8.kicad_pcb")
+        shutil.copyfile(os.path.join(BOARDS, "T8.kicad_pcb"), path)
+        subprocess.run([KICAD_PYTHON, "-m", "plugins.cli", "-p", path, "-nI", "-nB", "--archiveName", "T8"],
+                       cwd=ROOT, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        with open(os.path.join(work, "production", "T8_positions.csv"), encoding="utf-8-sig") as fh:
+            cpl = [line.split(",")[0] for line in fh.read().splitlines()[1:]]
+        with open(os.path.join(work, "production", "T8_bom.csv"), encoding="utf-8-sig") as fh:
+            bom = fh.read()
+        self.assertEqual(cpl, ["R1"])
+        self.assertNotIn("H1", bom)
+
     @unittest.skipUnless(os.path.isdir(os.path.join(UPSTREAM, "plugins")), "no upstream clone in ref/")
     def test_no_image_identical_to_upstream(self):
         """§6.3.9: without image, same ZIP (and BOM/CPL) as Fabrication Toolkit."""

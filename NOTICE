@@ -8,7 +8,7 @@ Fabrication Toolkit
   https://github.com/bennymeg/Fabrication-Toolkit (commit 7f627b6b)
   Licensed under the Apache License, Version 2.0 (see LICENSE).
   Modified files carry a "Modified" notice: plugins/cli.py, plugins/options.py,
-  plugins/plugin.py, plugins/thread.py, metadata.json.
+  plugins/plugin.py, plugins/process.py, plugins/thread.py, metadata.json.
 
 plugins/color_silkscreen/ is a Python port of the "colorful" module and of the
 Gerber conversion of TransJLC.

@@ -4,8 +4,10 @@ Fork de [Fabrication Toolkit](https://github.com/bennymeg/Fabrication-Toolkit) (
 couleur (PNG ou JPG) sur la face dessus et/ou dessous, et produit un ZIP commandable chez JLCPCB avec l'option
 **« EasyEDA multi-color silkscreen »**.
 
-Sans image, le comportement et le ZIP sont **identiques** à Fabrication Toolkit (vérifié par test). BOM et CPL ne
-changent pas.
+Sans image, le ZIP Gerber est **identique** à celui de Fabrication Toolkit (vérifié par test). Seule différence
+voulue : le fichier de positions (CPL) ne liste que les composants présents dans le BOM. Un composant exclu du BOM
+(trou de fixation, logo, point de test…) ou « board only » n'y figure plus, même si sa case « Exclure des fichiers
+de position » n'est pas cochée dans KiCad ; les assembleurs refusent les lignes de CPL sans ligne de BOM.
 
 ## ⚠️ Avertissement
 
@@ -32,7 +34,7 @@ python tools/build_pcm.py
 ```
 
 Puis dans KiCad 10 : *Gestionnaire de plugins et de contenus → Installer depuis un fichier…* →
-`dist/fabrication-toolkit-color-0.2.6.zip`.
+`dist/fabrication-toolkit-color-0.2.7.zip`.
 
 **Copie de développement** : copier (ou lier) le dossier `plugins/` dans
 `%USERPROFILE%\Documents\KiCad\10.0\scripting\plugins\fabrication_toolkit_color\`, puis *Outils → Plugins externes →
