@@ -125,7 +125,7 @@ Code de sortie : `0` si tout va bien, `1` en cas d'échec (détail dans le rappo
   avertissement `W_IMAGE_LOW_DPI` est émis.
 - L'image couvre le **rectangle englobant du contour** (Edge.Cuts). Les zones transparentes du PNG laissent le blanc
   de la carte.
-- Les ouvertures du masque de soudure (pastilles, vias non couverts) sont automatiquement exclues de l'impression. Les ouvertures superposées (pastilles empilées d'un USB-C, vias dans une pastille) sont fusionnées, et la génération s'arrête (`E_MASK_COVERED`) si une pastille devait rester sous l'encre.
+- Les ouvertures du masque de soudure (pastilles, vias non couverts) sont automatiquement exclues de l'impression. Les ouvertures superposées (pastilles empilées d'un USB-C, vias dans une pastille) sont fusionnées, et la génération s'arrête (`E_MASK_COVERED`) si une pastille devait rester sous l'encre. Règle retenue : **aucune encre sur une ouverture de masque**, y compris les vias des trous de fixation et des pastilles ou plans thermiques ; seuls les vias recouverts de vernis (tented) reçoivent l'encre.
 - La sérigraphie classique (F/B.Silkscreen) est conservée telle quelle dans le ZIP.
 
 ## Commander chez JLCPCB
