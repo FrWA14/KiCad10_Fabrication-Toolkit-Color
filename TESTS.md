@@ -154,6 +154,12 @@ Le dossier `svg/` contient les SVG en clair (option `--debugSvg`). On peut les o
     Ajouts : calques (image, sérigraphie noire par défaut, découpe booléenne des ouvertures et perçages), aperçu de
     l'export reconstruit depuis le ZIP, pré-contrôle automatique.
 
+17. **0.3.1 : vias recouverts sous l'encre.** En 0.3.0, la découpe retirait l'image sur tous les perçages, y compris
+    les vias recouverts de vernis. Désormais seuls le cuivre à nu (ouvertures du masque, vias non recouverts sur la
+    face concernée) et les trous de pastilles sont découpés. Carte RP2350 : 75/75 vias recouverts encrés au dos,
+    117/117 pastilles ouvertes découpées. Bug évité avant publication : `PCB_VIA.GetWidth()` sans argument de couche
+    déclenche dans KiCad 10 une boîte d'assertion bloquante ; l'appel passe maintenant la couche.
+
 ## Validation manuelle chez JLCPCB (à faire par l'utilisateur)
 
 Procédure : README, section « Valider chez JLCPCB ». Reporter ici les messages exacts.

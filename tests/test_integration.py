@@ -61,6 +61,21 @@ class Integration(unittest.TestCase):
         self.assertEqual(cpl, ["R1"])
         self.assertNotIn("H1", bom)
 
+    def test_tented_via_not_cut_pads_cut(self):
+        """Ink goes over tented vias; bare copper (mask openings) and pad holes are cut."""
+        import pcbnew  # type: ignore
+        from plugins.color_silkscreen import board_view, placement as pl
+        view = board_view.extract(pcbnew.LoadBoard(os.path.join(BOARDS, "T2.kicad_pcb")))
+        k = pl.DPI / 25.4
+        p = {"image": os.path.join(ROOT, "tests", "img", "logo.png"), "cx": 25, "cy": 15, "w": 50, "h": 30, "rot": 0}
+        a = pl.compose(view, "top", p).getchannel("A")
+        self.assertEqual(a.getpixel((int(16 * k), int(15 * k))), 255)   # tented via (116, -95): ink over it
+        self.assertEqual(a.getpixel((int(10 * k), int(15 * k))), 0)     # SMD pad: cut
+        self.assertEqual(a.getpixel((int(22 * k), int(15 * k))), 0)     # THT pad and its hole: cut
+        b = pl.compose(view, "bottom", p).getchannel("A")
+        self.assertEqual(b.getpixel((int((50 - 16) * k), int(15 * k))), 255)  # tented on the bottom too
+        self.assertEqual(b.getpixel((int((50 - 22) * k), int(15 * k))), 0)    # THT pad open on the bottom
+
     @unittest.skipUnless(os.path.isdir(os.path.join(UPSTREAM, "plugins")), "no upstream clone in ref/")
     def test_no_image_identical_to_upstream(self):
         """§6.3.9: without image, same ZIP (and BOM/CPL) as Fabrication Toolkit."""

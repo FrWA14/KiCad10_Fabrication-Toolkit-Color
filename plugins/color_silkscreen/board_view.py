@@ -81,7 +81,9 @@ def extract(board):
                 hls.append([local(p) for p in chain(polys.Hole(i, j))])
         openings[side] = {"outlines": outs, "holes": hls}
 
-    # Every drilled hole goes through both faces: no ink can stay there.
+    # Holes that must stay ink-free: pad holes (THT, mechanical) on both faces.
+    # Vias are only cut on a face where they are NOT tented: a tented via is under
+    # the solder mask and the colour ink can go over it (like over any track).
     drills = []
     for pad in board.GetPads():
         if not pad.HasHole():
@@ -90,11 +92,22 @@ def extract(board):
         x, y = local((mm(pad.GetX()), mm(pad.GetY())))
         angle = pad.GetOrientationDegrees() if hasattr(pad, "GetOrientationDegrees") else 0.0
         drills.append({"x": x, "y": y, "w": round(mm(size.x), 4), "h": round(mm(size.y), 4), "angle": angle})
+    open_vias = {"top": [], "bottom": []}
     for track in board.GetTracks():
-        if track.GetClass() == "PCB_VIA":
-            x, y = local((mm(track.GetX()), mm(track.GetY())))
-            d = round(mm(track.GetDrillValue()), 4)
-            drills.append({"x": x, "y": y, "w": d, "h": d, "angle": 0.0})
+        if track.GetClass() != "PCB_VIA":
+            continue
+        x, y = local((mm(track.GetX()), mm(track.GetY())))
+        for side, layer, copper in (("top", pcbnew.F_Mask, pcbnew.F_Cu), ("bottom", pcbnew.B_Mask, pcbnew.B_Cu)):
+            tented = track.IsTented(layer) if hasattr(track, "IsTented") else True
+            if not tented:
+                # untented: the whole via annulus is bare copper. KiCad 10 needs the layer
+                # argument (without it, an assert dialog blocks KiCad).
+                try:
+                    width = track.GetWidth(copper)
+                except TypeError:
+                    width = track.GetWidth()
+                d = round(mm(width), 4)
+                open_vias[side].append({"x": x, "y": y, "w": d, "h": d, "angle": 0.0})
 
     return {
         "width": round(width, 4), "height": round(height, 4),
@@ -106,6 +119,7 @@ def extract(board):
         "silk": silk,
         "openings": openings,
         "drills": drills,
+        "open_vias": open_vias,
     }
 
 
@@ -158,7 +172,7 @@ def side_geometry(view, side):
         fps.append(dict(fp, x=x))
     op = view.get("openings", {}).get(side, {"outlines": [], "holes": []})
     drills = [dict(d, x=view_x(view, side, d["x"]), angle=(-d["angle"] if side == "bottom" else d["angle"]))
-              for d in view.get("drills", [])]
+              for d in view.get("drills", []) + view.get("open_vias", {}).get(side, [])]
     return {"outlines": [pts(o) for o in view["outlines"]], "holes": [pts(h) for h in view["holes"]],
             "silk": [pts(c) for c in view.get("silk", {}).get(side, [])],
             "openings": [pts(c) for c in op["outlines"]], "openings_holes": [pts(c) for c in op["holes"]],

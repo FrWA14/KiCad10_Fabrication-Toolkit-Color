@@ -34,7 +34,7 @@ python tools/build_pcm.py
 ```
 
 Puis dans KiCad 10 : *Gestionnaire de plugins et de contenus → Installer depuis un fichier…* →
-`dist/fabrication-toolkit-color-0.3.0.zip`.
+`dist/fabrication-toolkit-color-0.3.1.zip`.
 
 **Copie de développement** : copier (ou lier) le dossier `plugins/` dans
 `%USERPROFILE%\Documents\KiCad\10.0\scripting\plugins\fabrication_toolkit_color\`, puis *Outils → Plugins externes →
@@ -99,9 +99,11 @@ Pour chaque face, l'image envoyée à JLCPCB est construite en calques, dans cet
 2. **Sérigraphie** de la face, au-dessus de l'image. Activée par défaut, en **noir**, dès qu'une image est chargée
    (case « Couleur par défaut (noir) ») ; choisir une couleur décoche cette case. Le Gerber de sérigraphie classique
    est alors vidé, avec son empreinte EasyEDA.
-3. **Découpe booléenne** : l'image est retirée sur toutes les ouvertures du masque (pastilles à souder, pastilles
-   thermiques, anneaux des trous de fixation) et sur tous les perçages (pastilles, vias, trous oblongs). Contours
-   exacts fournis par KiCad.
+3. **Découpe booléenne** : l'image est retirée là où le cuivre est à nu, c'est-à-dire sur les ouvertures du masque
+   (pastilles à souder, pastilles thermiques, anneaux des trous de fixation, vias laissés ouverts) et sur les trous des
+   pastilles (traversantes, oblongues, mécaniques). Contours exacts fournis par KiCad. Les **vias recouverts de vernis
+   (tented)**, les pistes et les antennes PCB sont sous le vernis : l'image passe par-dessus. Dans l'aperçu de l'export,
+   leurs trous restent dessinés comme dans le Gerber Viewer de JLCPCB (calque « Perçages »).
 4. **Contour** : tout ce qui sort d'Edge.Cuts (et des découpes internes) est retiré.
 
 Le SVG chiffré garde en plus sa propre découpe des ouvertures (double protection).
