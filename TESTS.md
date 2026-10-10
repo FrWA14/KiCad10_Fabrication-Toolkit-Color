@@ -107,6 +107,16 @@ Le dossier `svg/` contient les SVG en clair (option `--debugSvg`). On peut les o
     carte imprimée. Ajouts 0.2.5 : correction d'impression par face et mire de calage
     (`out/jlc_tests/RP2350_mire_calage.zip`) pour mesurer l'écart sur les deux faces.
 
+11. **Bug corrigé en 0.2.6 : pastilles couvertes d'encre (signalé par JLCPCB le 10 octobre 2026).** Avec l'option
+    couleur, l'aperçu JLCPCB ne montrait que 8 des 12 pastilles de l'USB-C J1. L'empreinte HCTL HC-TYPE-C-16P-01A
+    empile deux pastilles identiques (A1/B12, A12/B1, A4/B9, A9/B4). Le Gerber F.Mask est correct, mais le SVG couleur
+    découpe les ouvertures avec `fill-rule: evenodd` : deux ouvertures superposées **s'annulent** et l'encre couvrait
+    ces 4 pastilles. Même défaut pour les 8 vias de chaque trou de fixation (points d'encre dans les trous) et les
+    vias thermiques du RP2350. Correctif (`union.py`) : doublons retirés, ouvertures incluses dans une autre
+    retirées, autres chevauchements unis en rectangles disjoints (pas de 0,01 mm). Contrôle ajouté : chaque centre de
+    pastille doit rester ouvert, sinon erreur `E_MASK_COVERED`. Sur la carte RP2350 : 4 doublons + 41 ouvertures
+    incluses (dessus), 32 (dessous), aucune pastille couverte. Le profil `transjlc` garde l'ancien comportement.
+
 ## Validation manuelle chez JLCPCB (à faire par l'utilisateur)
 
 Procédure : README, section « Valider chez JLCPCB ». Reporter ici les messages exacts.

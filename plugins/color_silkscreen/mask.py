@@ -18,6 +18,7 @@ import re
 from . import gerber
 from .errors import ColorSilkError
 from .numfmt import f
+from .union import covered_points, merge_openings
 
 UNIT = 0.254  # mm per 10 mil
 CIRCLE_SEGMENTS = 48
@@ -250,7 +251,8 @@ def _stadium(start, end, width):
 
 
 def _exact_paths(doc, warnings):
-    shapes = []
+    items = []          # (svg path d, polygon in SVG units) - polygon used for overlap tests
+    centres = []        # flash centres: every pad must stay open
     unknown = set()
     for flash in doc.flashes:
         ap = flash.aperture
@@ -264,47 +266,56 @@ def _exact_paths(doc, warnings):
             unknown.add(ap.kind)
             continue
         cx, cy = to_svg(flash.x, flash.y)
+        centres.append((cx, cy))
         if outline[0] == "circle":
-            shapes.append(_circle_path(cx, cy, outline[1] / UNIT))
+            r = outline[1] / UNIT
+            items.append((_circle_path(cx, cy, r), _circle_points(cx, cy, r)))
         else:
-            shapes.append(_poly_path([to_svg(flash.x + x, flash.y + y) for x, y in outline[1]]))
+            poly = [to_svg(flash.x + x, flash.y + y) for x, y in outline[1]]
+            items.append((_poly_path(poly), poly))
 
     for region in doc.regions:
         sx, sy = to_svg(*region.segments[0][0])
         d = "M {} {} ".format(f(sx), f(sy))
+        poly = [(sx, sy)]
         for start, end, arc in region.segments:
             if arc:
                 d += _arc_cmd(start, end, arc)
+                poly += [to_svg(*q) for q in _sample_arc(start, end, arc)[1:]]
             else:
                 ex, ey = to_svg(*end)
                 d += "L {} {} ".format(f(ex), f(ey))
-        shapes.append(d + "Z ")
+                poly.append((ex, ey))
+        if len(poly) >= 3:
+            items.append((d + "Z ", poly))
 
-    strokes = 0
     for stroke in doc.strokes:
         ap = stroke.aperture
         if ap is None or ap.kind != "C" or not ap.params:
             continue
-        if stroke.arc:
-            # Sample the arc into short straight stadiums.
-            pts = _sample_arc(stroke.start, stroke.end, stroke.arc)
-            for a, b in zip(pts, pts[1:]):
-                poly = _stadium(a, b, ap.params[0])
-                if poly:
-                    shapes.append(_poly_path(poly))
-        else:
-            poly = _stadium(stroke.start, stroke.end, ap.params[0])
+        pts = _sample_arc(stroke.start, stroke.end, stroke.arc) if stroke.arc else [stroke.start, stroke.end]
+        for a, b in zip(pts, pts[1:]):
+            poly = _stadium(a, b, ap.params[0])
             if poly:
-                shapes.append(_poly_path(poly))
-        strokes += 1
+                items.append((_poly_path(poly), poly))
 
     if unknown:
         warnings.append({"code": "W_MASK_APERTURE",
                          "message": "Ouvertures de masque ignorées (forme inconnue) : " + ", ".join(sorted(unknown))})
-    if strokes:
-        warnings.append({"code": "W_MASK_STROKES",
-                         "message": "{} tracé(s) sur la couche masque : les jonctions qui se recouvrent "
-                                    "peuvent être imprimées (règle evenodd).".format(strokes)})
+
+    # Even-odd clip: overlapping openings would cancel and get ink. Merge them first.
+    shapes, polys, stats = merge_openings(items)
+    if stats["duplicates_removed"] or stats["groups_merged"] or stats["contained_removed"]:
+        warnings.append({"code": "I_MASK_MERGED",
+                         "message": "Ouvertures de masque superposées fusionnées : {} doublon(s) retiré(s) (ex. pastilles "
+                                    "USB-C empilées), {} ouverture(s) incluse(s) dans une autre, {} groupe(s) unifié(s)."
+                                    .format(stats["duplicates_removed"], stats["contained_removed"], stats["groups_merged"])})
+    bad = covered_points(centres, polys)
+    if bad:
+        warnings.append({"code": "E_MASK_COVERED",
+                         "message": "{} pastille(s) resteraient sous l'encre couleur.".format(len(bad)),
+                         "points_mm": [[round(x * UNIT, 3), round(-y * UNIT, 3)] for x, y in bad]})
+    warnings.append({"code": "I_MASK_POLYGONS", "polygons": polys, "centres": centres})  # for checks/tests
     return shapes
 
 

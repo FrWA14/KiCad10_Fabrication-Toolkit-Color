@@ -32,7 +32,7 @@ python tools/build_pcm.py
 ```
 
 Puis dans KiCad 10 : *Gestionnaire de plugins et de contenus → Installer depuis un fichier…* →
-`dist/fabrication-toolkit-color-0.2.5.zip`.
+`dist/fabrication-toolkit-color-0.2.6.zip`.
 
 **Copie de développement** : copier (ou lier) le dossier `plugins/` dans
 `%USERPROFILE%\Documents\KiCad\10.0\scripting\plugins\fabrication_toolkit_color\`, puis *Outils → Plugins externes →
@@ -125,7 +125,7 @@ Code de sortie : `0` si tout va bien, `1` en cas d'échec (détail dans le rappo
   avertissement `W_IMAGE_LOW_DPI` est émis.
 - L'image couvre le **rectangle englobant du contour** (Edge.Cuts). Les zones transparentes du PNG laissent le blanc
   de la carte.
-- Les ouvertures du masque de soudure (pastilles, vias non couverts) sont automatiquement exclues de l'impression.
+- Les ouvertures du masque de soudure (pastilles, vias non couverts) sont automatiquement exclues de l'impression. Les ouvertures superposées (pastilles empilées d'un USB-C, vias dans une pastille) sont fusionnées, et la génération s'arrête (`E_MASK_COVERED`) si une pastille devait rester sous l'encre.
 - La sérigraphie classique (F/B.Silkscreen) est conservée telle quelle dans le ZIP.
 
 ## Commander chez JLCPCB
@@ -166,6 +166,7 @@ Code de sortie : `0` si tout va bien, `1` en cas d'échec (détail dans le rappo
 | `E_IMAGE_FORMAT` | ni PNG ni JPG (BMP, SVG… refusés) |
 | `E_IMAGE_TOO_SMALL` | moins de 32 px de côté |
 | `E_MASK_PARSE` | Gerber de masque illisible |
+| `E_MASK_COVERED` | une pastille resterait couverte d'encre couleur (ouverture de masque manquante ou annulée) |
 | `E_CRYPTO_BACKEND` | aucun moteur AES-GCM utilisable |
 | `E_ZIP` | écriture impossible |
 | `E_BOARD_TOO_LARGE_ADJUST` | contour Gerber et contour de la carte écartés de plus de 2 mm |

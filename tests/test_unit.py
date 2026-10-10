@@ -154,9 +154,47 @@ class MaskTests(unittest.TestCase):
              "G03X1000000Y1000000I0J500000D01*\nX0Y0D01*\nG37*\nG01*\nD10*\nX0Y0D02*\nX5000000Y0D01*\nM02*\n")
         warnings = []
         paths = mask.parse_solder_mask(g, warnings=warnings)
-        self.assertEqual(len(paths), 2)
-        self.assertIn("A ", paths[0])
-        self.assertEqual(warnings[0]["code"], "W_MASK_STROKES")
+        codes = {w["code"]: w for w in warnings}
+        # region and stroke touch at (0, 0): merged into non-overlapping rectangles
+        self.assertIn("1 groupe(s) unifié", codes["I_MASK_MERGED"]["message"])
+        self.assertNotIn("E_MASK_COVERED", codes)
+        self.assertTrue(all(p.startswith("M ") and p.endswith("Z ") for p in paths))
+        # a region alone keeps its true arcs
+        alone = mask.parse_solder_mask(g.replace("D10*\nX0Y0D02*\nX5000000Y0D01*\n", ""))
+        self.assertEqual(len(alone), 1)
+        self.assertIn("A ", alone[0])
+
+
+class MaskOverlapTests(unittest.TestCase):
+    """Even-odd clip: overlapping openings must not cancel (USB-C stacked pads A1/B12 bug)."""
+
+    GERBER = ("%FSLAX46Y46*%\n%MOMM*%\n%ADD10R,0.600000X1.300000*%\n%ADD11C,6.400000*%\n%ADD12C,0.800000*%\n"
+              "%ADD13R,1.000000X1.000000*%\n"
+              "D10*\nX10000000Y-5000000D03*\nX10000000Y-5000000D03*\n"          # two stacked identical pads
+              "D11*\nX30000000Y-10000000D03*\nD12*\nX31700000Y-10000000D03*\n"  # via inside a big pad
+              "D13*\nX50000000Y-5000000D03*\nX50600000Y-5000000D03*\n"          # two partly overlapping pads
+              "M02*\n")
+
+    def test_every_pad_stays_open(self):
+        from plugins.color_silkscreen.union import covered_points
+        warnings = []
+        mask.parse_solder_mask(self.GERBER, warnings=warnings)
+        codes = {w["code"]: w for w in warnings}
+        self.assertNotIn("E_MASK_COVERED", codes)
+        merged = codes["I_MASK_MERGED"]["message"]
+        self.assertIn("1 doublon", merged)
+        self.assertIn("1 ouverture(s) incluse", merged)
+        self.assertIn("1 groupe(s) unifié", merged)
+        polys = codes["I_MASK_POLYGONS"]["polygons"]
+        extra = [mask.to_svg(50.3, -5), mask.to_svg(31.7, -10)]  # overlap zone, contained via
+        self.assertEqual(covered_points(codes["I_MASK_POLYGONS"]["centres"] + extra, polys), [])
+
+    def test_naive_even_odd_would_fail(self):
+        from plugins.color_silkscreen import union
+        sq = [(0, 0), (1, 0), (1, 1), (0, 1)]
+        self.assertEqual(union.covered_points([(0.5, 0.5)], [sq, sq]), [(0.5, 0.5)])  # the original bug
+        rects = union.union_rectangles([sq, [(0.5, 0), (1.5, 0), (1.5, 1), (0.5, 1)]], 0.1)
+        self.assertEqual(rects, [(0.0, 0.0, 1.5, 1.0)])
 
 
 class JlcConvertTests(unittest.TestCase):

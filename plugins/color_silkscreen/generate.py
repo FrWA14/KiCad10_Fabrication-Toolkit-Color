@@ -99,6 +99,11 @@ def generate_color_silkscreen(gerber_dir, top_image=None, bottom_image=None, rep
             warnings.append({"code": "W_NO_MASK", "message": "Pas de Gerber de masque {} : aucune ouverture.".format(side)})
         report.step("mask_" + side, openings=len(mask_paths), mode=mask_mode)
         for w in warnings:
+            if w["code"] == "I_MASK_POLYGONS":  # internal geometry, not a user-facing warning
+                continue
+            if w["code"] == "E_MASK_COVERED":
+                raise ColorSilkError("E_MASK_COVERED", "Face {} : {} Positions (mm, Gerber) : {}".format(
+                    side, w["message"], w["points_mm"][:10]))
             report.warn(w)
 
         svg = builder(bounds, image, mask_paths, options.mark_inset_mm, options.eda_version)

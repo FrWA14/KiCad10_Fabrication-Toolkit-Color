@@ -14,6 +14,8 @@ HINTS = {
                                 "vérifier Edge.Cuts, l'origine auxiliaire et les options User.1/User.2.",
     "E_GERBER_MISSING": "Le jeu de Gerbers est incomplet ; vérifier les couches activées.",
     "E_PLACEMENT": "Corriger le placement (taille > 0, rotation 0/90/180/270) dans l'éditeur de placement.",
+    "E_MASK_COVERED": "Des pastilles seraient couvertes d'encre couleur : vérifier les ouvertures de masque "
+                      "(F/B.Mask) de ces pastilles et signaler le cas avec le log.",
     "E_INTERNAL": "Erreur inattendue ; joindre color_silkscreen.log au rapport de bug.",
 }
 
