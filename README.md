@@ -218,6 +218,14 @@ Code de sortie : `0` si tout va bien, `1` en cas d'échec (détail dans le rappo
 | Advanced Options → *Silkscreen Technology* | **EasyEDA multi-color silkscreen** |
 | Livraison | Single PCB ou Panel by Customer (la panelisation JLCPCB ne duplique pas la couleur) |
 
+Sur la page de devis, après l'envoi du ZIP : PCB **White**, finition **ENIG**, cuivre extérieur **1 oz** :
+
+![Réglages de la commande JLCPCB : couleur, finition, cuivre](docs/images/jlcpcb_commande_1.png)
+
+Puis, dans **Advanced Options**, *Silkscreen Technology* → **EasyEDA multi-color silkscreen** :
+
+![Réglages de la commande JLCPCB : sérigraphie multicolore](docs/images/jlcpcb_commande_2.png)
+
 - Si ces options n'apparaissent pas : mettre au panier, puis *edit order*.
 - Prévoir du cuivre sur chaque face imprimée : une carte sans cuivre peut être signalée par les ingénieurs JLCPCB.
 - Si JLCPCB doit ajuster les Gerbers de plus de **2 mm**, la couleur est retirée. Le plugin compare donc le contour

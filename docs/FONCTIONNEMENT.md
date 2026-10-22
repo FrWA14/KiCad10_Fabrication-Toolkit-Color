@@ -93,8 +93,16 @@ du ZIP** : vernis, image couleur, sérigraphie, cuivre nu, perçages, contour. U
 sur lesquels JLCPCB a déjà refusé des fichiers : couches présentes, version EasyEDA, empreinte de chaque Gerber,
 fichiers couleur présents, sérigraphie classique vidée quand elle est imprimée en couleur, taille du ZIP.
 
-Ensuite, chez JLCPCB : *Add Gerber file*, PCB **blanc**, finition **ENIG**, *Silkscreen Technology* →
-**EasyEDA multi-color silkscreen**. Le Gerber Viewer de JLCPCB simule alors la couleur :
+Ensuite, chez JLCPCB : *Add Gerber file*, puis régler la commande. PCB **White**, finition **ENIG**, cuivre
+extérieur **1 oz** :
+
+![Réglages de la commande JLCPCB : couleur, finition, cuivre](images/jlcpcb_commande_1.png)
+
+Dans **Advanced Options**, *Silkscreen Technology* → **EasyEDA multi-color silkscreen** :
+
+![Réglages de la commande JLCPCB : sérigraphie multicolore](images/jlcpcb_commande_2.png)
+
+Le Gerber Viewer de JLCPCB simule alors la couleur :
 
 | Dessus | Dessous |
 |---|---|
