@@ -4,6 +4,21 @@ Fork de [Fabrication Toolkit](https://github.com/bennymeg/Fabrication-Toolkit) (
 couleur (PNG ou JPG) sur la face dessus et/ou dessous, et produit un ZIP commandable chez JLCPCB avec l'option
 **« EasyEDA multi-color silkscreen »**.
 
+![Cartes RP2350 fabriquées par JLCPCB avec ce plugin](docs/images/cartes_fabriquees.jpg)
+
+- **Carte d'exemple** : [KiCad10_RP2350B_DevelopmentBoard](https://github.com/FrWA14/KiCad10_RP2350B_DevelopmentBoard),
+  la carte RP2350B des photos, avec ses fichiers de fabrication couleur.
+- **Fonctionnement détaillé, illustré** : [docs/FONCTIONNEMENT.md](docs/FONCTIONNEMENT.md).
+
+### Crédits
+
+- [Fabrication Toolkit](https://github.com/bennymeg/Fabrication-Toolkit) de Benny Megidish : base du plugin
+  (Gerbers, perçages, BOM, CPL, archive).
+- [TransJLC](https://github.com/HalfSweet/TransJLC) de HalfSweet : rétro-ingénierie du format couleur de JLCPCB,
+  porté ici en Python.
+- [Claude](https://claude.com/claude-code) (Anthropic) : code des modules couleur, de l'éditeur de placement, de
+  l'aperçu de l'export et des tests, écrit avec Claude Code.
+
 Sans image, le ZIP Gerber est **identique** à celui de Fabrication Toolkit (vérifié par test). Seule différence
 voulue : le fichier de positions (CPL) ne liste que les composants présents dans le BOM. Un composant exclu du BOM
 (trou de fixation, logo, point de test…) ou « board only » n'y figure plus, même si sa case « Exclure des fichiers
@@ -17,8 +32,8 @@ de position » n'est pas cochée dans KiCad ; les assembleurs refusent les ligne
 - Pour être reconnu comme « couleur », le ZIP imite un export EasyEDA Pro : Gerbers renommés, en-tête
   `G04 EasyEDA Pro …` et ouverture « empreinte ». La géométrie des Gerbers n'est pas modifiée.
 - **Validé à l'upload le 6 octobre 2026** (v0.2.3) : JLCPCB accepte l'option *EasyEDA multi-color silkscreen* et
-  son *Gerber Viewer* affiche l'image au bon endroit. **Aucune carte n'a encore été fabriquée** : le rendu physique
-  reste à confirmer. Vérifier toujours l'aperçu avant de payer (voir « Valider chez JLCPCB »).
+  son *Gerber Viewer* affiche l'image au bon endroit. Des cartes ont depuis été fabriquées et livrées avec ce plugin
+  (photo ci-dessus). Vérifier toujours l'aperçu avant de payer (voir « Valider chez JLCPCB »).
 - JLCPCB refuse les fichiers marqués avec une ancienne version d'EasyEDA (« multi-color silkscreen file is outdated…
   V3.2.135 or later »). Les marqueurs par défaut (`3.2.148`, `2.4(2026-05-08)`) passent ; s'ils sont refusés un jour,
   les changer avec `--easyedaVersion` / `--edaVersion` (ou `COLOR_EASYEDA_VERSION` / `COLOR_EDA_VERSION` dans
@@ -27,14 +42,15 @@ de position » n'est pas cochée dans KiCad ; les assembleurs refusent les ligne
 
 ## Installation
 
-**Paquet PCM** (recommandé) :
+**Paquet PCM** (recommandé) : télécharger
+[`dist/fabrication-toolkit-color-0.3.1.zip`](dist/fabrication-toolkit-color-0.3.1.zip), puis dans KiCad 10 :
+*Gestionnaire de plugins et de contenus → Installer depuis un fichier…* → choisir ce ZIP.
+
+Pour reconstruire le paquet depuis les sources :
 
 ```bash
 python tools/build_pcm.py
 ```
-
-Puis dans KiCad 10 : *Gestionnaire de plugins et de contenus → Installer depuis un fichier…* →
-`dist/fabrication-toolkit-color-0.3.1.zip`.
 
 **Copie de développement** : copier (ou lier) le dossier `plugins/` dans
 `%USERPROFILE%\Documents\KiCad\10.0\scripting\plugins\fabrication_toolkit_color\`, puis *Outils → Plugins externes →
