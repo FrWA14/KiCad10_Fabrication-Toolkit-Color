@@ -110,7 +110,9 @@ d'impression X / Y**. Pour la carte RP2350, la face du dessous est corrigée de 
 
 ## 5. Résultat
 
-![Cartes RP2350 fabriquées](images/cartes_fabriquees.jpg)
+<p align="center">
+  <img src="images/cartes_fabriquees.jpg" width="500" alt="Cartes RP2350 fabriquées">
+</p>
 
 ## Organisation du code
 

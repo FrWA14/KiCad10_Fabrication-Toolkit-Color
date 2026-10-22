@@ -4,7 +4,14 @@ Fork de [Fabrication Toolkit](https://github.com/bennymeg/Fabrication-Toolkit) (
 couleur (PNG ou JPG) sur la face dessus et/ou dessous, et produit un ZIP commandable chez JLCPCB avec l'option
 **« EasyEDA multi-color silkscreen »**.
 
-![Cartes RP2350 fabriquées par JLCPCB avec ce plugin](docs/images/cartes_fabriquees.jpg)
+Sans image, le ZIP Gerber est **identique** à celui de Fabrication Toolkit (vérifié par test). Seule différence
+voulue : le fichier de positions (CPL) ne liste que les composants présents dans le BOM. Un composant exclu du BOM
+(trou de fixation, logo, point de test…) ou « board only » n'y figure plus, même si sa case « Exclure des fichiers
+de position » n'est pas cochée dans KiCad ; les assembleurs refusent les lignes de CPL sans ligne de BOM.
+
+<p align="center">
+  <img src="docs/images/cartes_fabriquees.jpg" width="500" alt="Cartes RP2350 fabriquées par JLCPCB avec ce plugin">
+</p>
 
 - **Carte d'exemple** : [KiCad10_RP2350B_DevelopmentBoard](https://github.com/FrWA14/KiCad10_RP2350B_DevelopmentBoard),
   la carte RP2350B des photos, avec ses fichiers de fabrication couleur.
@@ -19,10 +26,28 @@ couleur (PNG ou JPG) sur la face dessus et/ou dessous, et produit un ZIP command
 - [Claude](https://claude.com/claude-code) (Anthropic) : code des modules couleur, de l'éditeur de placement, de
   l'aperçu de l'export et des tests, écrit avec Claude Code.
 
-Sans image, le ZIP Gerber est **identique** à celui de Fabrication Toolkit (vérifié par test). Seule différence
-voulue : le fichier de positions (CPL) ne liste que les composants présents dans le BOM. Un composant exclu du BOM
-(trou de fixation, logo, point de test…) ou « board only » n'y figure plus, même si sa case « Exclure des fichiers
-de position » n'est pas cochée dans KiCad ; les assembleurs refusent les lignes de CPL sans ligne de BOM.
+## Aperçu
+
+### Le plugin dans KiCad
+
+La fenêtre du plugin (à gauche) et l'éditeur de placement (à droite), face dessus puis face dessous :
+
+![Plugin dans KiCad, face dessus](docs/images/plugin_kicad_dessus.png)
+
+![Plugin dans KiCad, face dessous](docs/images/plugin_kicad_dessous.png)
+
+### Le résultat sur le site de JLCPCB
+
+Le ZIP généré, envoyé sur jlcpcb.com avec l'option *EasyEDA multi-color silkscreen* : le Gerber Viewer de JLCPCB
+affiche l'impression couleur des deux faces.
+
+| Dessus | Dessous |
+|---|---|
+| ![Gerber Viewer JLCPCB, dessus](docs/images/jlcpcb_viewer_dessus.png) | ![Gerber Viewer JLCPCB, dessous](docs/images/jlcpcb_viewer_dessous.png) |
+
+Le placement des composants pour l'assemblage, à partir du BOM et du CPL du même ZIP :
+
+![Placement des composants chez JLCPCB](docs/images/jlcpcb_placement_composants.png)
 
 ## ⚠️ Avertissement
 
