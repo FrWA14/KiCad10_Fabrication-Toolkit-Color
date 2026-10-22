@@ -67,9 +67,13 @@ Le placement des composants pour l'assemblage, à partir du BOM et du CPL du mê
 
 ## Installation
 
-**Paquet PCM** (recommandé) : télécharger
-[`dist/fabrication-toolkit-color-0.3.1.zip`](dist/fabrication-toolkit-color-0.3.1.zip), puis dans KiCad 10 :
-*Gestionnaire de plugins et de contenus → Installer depuis un fichier…* → choisir ce ZIP.
+**Paquet PCM** (recommandé) : télécharger `fabrication-toolkit-color-0.3.1.zip` depuis la
+[**dernière release**](https://github.com/FrWA14/KiCad10_Fabrication-Toolkit-Color/releases/latest), puis dans
+KiCad 10 : *Gestionnaire de plugins et de contenus → Installer depuis un fichier…* → choisir ce ZIP.
+Le même fichier est aussi dans [`dist/`](dist/fabrication-toolkit-color-0.3.1.zip).
+
+⚠️ Ne pas installer le ZIP du bouton vert *Code → Download ZIP* : il contient tout le dépôt (sources, tests,
+docs), pas le paquet du plugin.
 
 Pour reconstruire le paquet depuis les sources :
 
